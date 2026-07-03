@@ -16,6 +16,7 @@ export type EstadoPedido =
   | "cotizado"
   | "confirmado"
   | "en_produccion"
+  | "listo_despachar"
   | "despachado"
   | "facturado"
   | "cancelado";
@@ -23,6 +24,8 @@ export type EstadoPedido =
 export type OrigenPedido = "email" | "whatsapp" | "telefono";
 
 export type TipoComprobante = "remito" | "factura";
+
+export type MedioPago = "efectivo" | "transferencia" | "cheque" | "tarjeta" | "otro";
 
 export type Cliente = {
   id: string;
@@ -117,6 +120,17 @@ export type HistorialEstado = {
   nota: string | null;
 }
 
+export type Pago = {
+  id: string;
+  cliente_id: string;
+  pedido_id: string | null;
+  monto: number;
+  fecha: string;
+  medio_pago: MedioPago;
+  nota: string | null;
+  created_at: string;
+}
+
 type Row<T> = T;
 type Insert<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Update<T> = Partial<T>;
@@ -166,6 +180,12 @@ export interface Database {
         Update: Update<Comprobante>;
         Relationships: [];
       };
+      pagos: {
+        Row: Row<Pago>;
+        Insert: Insert<Pago, "id" | "pedido_id" | "fecha" | "medio_pago" | "nota" | "created_at">;
+        Update: Update<Pago>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -180,6 +200,7 @@ export interface Database {
       estado_pedido: EstadoPedido;
       origen_pedido: OrigenPedido;
       tipo_comprobante: TipoComprobante;
+      medio_pago: MedioPago;
     };
     CompositeTypes: Record<string, never>;
   };

@@ -83,6 +83,22 @@ export async function cambiarEstadoPedido(
     return { ok: false, error: "El pedido ya está en ese estado" };
   }
 
+  // Gate de facturación: para pasar a producción (o más adelante) el pedido
+  // tiene que haber sido facturado antes. Si todavía no llegó a "facturado",
+  // no puede saltar directo a un estado posterior.
+  const facturadoOrden = ESTADOS_PEDIDO.facturado.orden;
+  const yaFacturado = ESTADOS_PEDIDO[actual.estado].orden >= facturadoOrden;
+  if (
+    nuevoEstado !== "cancelado" &&
+    ESTADOS_PEDIDO[nuevoEstado].orden > facturadoOrden &&
+    !yaFacturado
+  ) {
+    return {
+      ok: false,
+      error: "El pedido tiene que estar facturado antes de pasar a producción.",
+    };
+  }
+
   const { error: updErr } = await supabase
     .from("pedidos")
     .update({ estado: nuevoEstado })
@@ -105,8 +121,10 @@ export async function cambiarEstadoPedido(
 /**
  * Genera un comprobante (remito/factura) para un pedido:
  *  - asigna número correlativo por tipo,
- *  - descuenta el stock una sola vez por pedido (función idempotente en DB),
- *  - avanza el estado (remito→despachado, factura→facturado) si corresponde.
+ *  - si es remito, descuenta el stock una sola vez por pedido (función
+ *    idempotente en DB) — la factura no toca stock porque ahora se emite
+ *    antes de producción, cuando la mercadería todavía no salió,
+ *  - avanza el estado (factura→facturado, remito→despachado) si corresponde.
  * Devuelve el comprobante creado para poder generar el PDF.
  */
 export async function generarComprobante(
@@ -144,11 +162,14 @@ export async function generarComprobante(
     .single();
   if (insErr) return { ok: false, error: insErr.message };
 
-  // Descuenta stock (idempotente: no repite si ya se descontó para este pedido).
-  const { error: stockErr } = await supabase.rpc("descontar_stock_pedido", {
-    p_pedido_id: pedidoId,
-  });
-  if (stockErr) return { ok: false, error: stockErr.message };
+  // Descuenta stock solo en el remito (la mercadería recién sale ahí);
+  // idempotente: no repite si ya se descontó para este pedido.
+  if (tipo === "remito") {
+    const { error: stockErr } = await supabase.rpc("descontar_stock_pedido", {
+      p_pedido_id: pedidoId,
+    });
+    if (stockErr) return { ok: false, error: stockErr.message };
+  }
 
   // Avanza el estado solo hacia adelante.
   const destino: EstadoPedido = tipo === "factura" ? "facturado" : "despachado";

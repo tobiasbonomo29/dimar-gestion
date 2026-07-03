@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -17,23 +18,24 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
-import { formatDate } from "@/lib/format";
-import type { Cliente } from "@/types/database";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { ClienteConSaldo } from "../queries";
 import { ClienteFormDialog } from "./cliente-form-dialog";
 import { deleteCliente } from "../actions";
 
-export function ClientesClient({ clientes }: { clientes: Cliente[] }) {
+export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
   const router = useRouter();
   const [formOpen, setFormOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<Cliente | null>(null);
-  const [toDelete, setToDelete] = React.useState<Cliente | null>(null);
+  const [editing, setEditing] = React.useState<ClienteConSaldo | null>(null);
+  const [toDelete, setToDelete] = React.useState<ClienteConSaldo | null>(null);
 
   function openNew() {
     setEditing(null);
     setFormOpen(true);
   }
 
-  function openEdit(cliente: Cliente) {
+  function openEdit(cliente: ClienteConSaldo) {
     setEditing(cliente);
     setFormOpen(true);
   }
@@ -67,6 +69,7 @@ export function ClientesClient({ clientes }: { clientes: Cliente[] }) {
               <TableHead>Email</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Cond. fiscal</TableHead>
+              <TableHead className="text-right">Saldo</TableHead>
               <TableHead>Alta</TableHead>
               <TableHead className="w-[90px] text-right">Acciones</TableHead>
             </TableRow>
@@ -74,24 +77,56 @@ export function ClientesClient({ clientes }: { clientes: Cliente[] }) {
           <TableBody>
             {clientes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No hay clientes. Creá el primero con “Nuevo cliente”.
                 </TableCell>
               </TableRow>
             ) : (
               clientes.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.razon_social}</TableCell>
-                  <TableCell>{c.nombre_contacto ?? "—"}</TableCell>
-                  <TableCell>{c.email ?? "—"}</TableCell>
-                  <TableCell>{c.telefono ?? "—"}</TableCell>
+                <TableRow key={c.id} className="cursor-pointer">
+                  <TableCell className="font-medium">
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      {c.razon_social}
+                    </Link>
+                  </TableCell>
                   <TableCell>
-                    <Badge className="border-slate-200 bg-slate-100 text-slate-700">
-                      {CONDICIONES_FISCALES[c.condicion_fiscal]}
-                    </Badge>
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      {c.nombre_contacto ?? "—"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      {c.email ?? "—"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      {c.telefono ?? "—"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      <Badge className="border-slate-200 bg-slate-100 text-slate-700">
+                        {CONDICIONES_FISCALES[c.condicion_fiscal]}
+                      </Badge>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      <span
+                        className={cn(
+                          "tabular-nums font-medium",
+                          c.saldo > 0 ? "text-red-600" : "text-muted-foreground",
+                        )}
+                      >
+                        {formatCurrency(c.saldo)}
+                      </span>
+                    </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(c.fecha_alta)}
+                    <Link href={`/clientes/${c.id}`} className="block">
+                      {formatDate(c.fecha_alta)}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">

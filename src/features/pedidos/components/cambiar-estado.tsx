@@ -61,6 +61,9 @@ export function CambiarEstado({ pedidoId, estadoActual, size = "default" }: Prop
     router.refresh();
   }
 
+  const facturadoOrden = ESTADOS_PEDIDO.facturado.orden;
+  const yaFacturado = ESTADOS_PEDIDO[estadoActual].orden >= facturadoOrden;
+
   return (
     <>
       <Select value={estadoActual} onValueChange={onSelect}>
@@ -68,11 +71,15 @@ export function CambiarEstado({ pedidoId, estadoActual, size = "default" }: Prop
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {ESTADOS_PEDIDO_LIST.map((e) => (
-            <SelectItem key={e} value={e}>
-              {ESTADOS_PEDIDO[e].label}
-            </SelectItem>
-          ))}
+          {ESTADOS_PEDIDO_LIST.map((e) => {
+            const bloqueado = e !== "cancelado" && ESTADOS_PEDIDO[e].orden > facturadoOrden && !yaFacturado;
+            return (
+              <SelectItem key={e} value={e} disabled={bloqueado}>
+                {ESTADOS_PEDIDO[e].label}
+                {bloqueado ? " (facturar primero)" : ""}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
 

@@ -101,7 +101,7 @@ export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
 
       {!pedido.stock_descontado ? (
         <p className="text-xs text-muted-foreground">
-          Al generar el primer comprobante se descuenta el stock de los productos.
+          Al generar el remito se descuenta el stock de los productos (la factura no).
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">Stock ya descontado para este pedido.</p>

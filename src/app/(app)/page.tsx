@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, Clock, Truck, DollarSign } from "lucide-react";
+import { ClipboardList, Clock, Truck, DollarSign, AlertCircle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EstadoBadge } from "@/components/estado-badge";
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi
           label="Pendientes de respuesta"
           value={String(data.pendientesRespuesta.length)}
@@ -99,6 +99,12 @@ export default async function DashboardPage() {
           icon={DollarSign}
           hint="Total de pedidos del mes"
         />
+        <Kpi
+          label="Total por cobrar"
+          value={formatCurrency(data.totalPorCobrar)}
+          icon={AlertCircle}
+          hint="Saldo pendiente de todos los clientes"
+        />
       </div>
 
       {/* Conteo por estado */}
@@ -117,7 +123,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Listas accionables */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Pendientes de respuesta</CardTitle>
@@ -150,6 +156,35 @@ export default async function DashboardPage() {
               </p>
             ) : (
               data.proximosDespachar.map((p) => <PedidoMini key={p.id} p={p} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">Clientes con más deuda</CardTitle>
+            <Link href="/clientes" className="text-xs text-muted-foreground hover:underline">
+              Ver todos
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.topDeudores.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No hay saldos pendientes. 🎉
+              </p>
+            ) : (
+              data.topDeudores.map((d) => (
+                <Link
+                  key={d.cliente_id}
+                  href={`/clientes/${d.cliente_id}`}
+                  className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm transition-colors hover:bg-accent"
+                >
+                  <span className="truncate font-medium">{d.razon_social}</span>
+                  <span className="tabular-nums font-medium text-red-600">
+                    {formatCurrency(d.saldo)}
+                  </span>
+                </Link>
+              ))
             )}
           </CardContent>
         </Card>
