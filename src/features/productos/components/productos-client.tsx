@@ -20,6 +20,7 @@ import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProductoConVariantes } from "../queries";
+import { getProductoNombre } from "../display";
 import { ProductoFormDialog } from "./producto-form-dialog";
 import { deleteProducto } from "../actions";
 
@@ -82,7 +83,7 @@ export function ProductosClient({ productos }: { productos: ProductoConVariantes
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {p.codigo ?? "—"}
                   </TableCell>
-                  <TableCell className="font-medium">{p.nombre}</TableCell>
+                  <TableCell className="font-medium">{getProductoNombre(p)}</TableCell>
                   <TableCell>
                     <Badge className="border-slate-200 bg-slate-100 text-slate-700">
                       {CATEGORIAS_PRODUCTO[p.categoria]}

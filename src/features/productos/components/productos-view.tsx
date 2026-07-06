@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ProductoConVariantes } from "../queries";
+import { getProductoNombre } from "../display";
 import { ProductosClient } from "./productos-client";
 import { PreciosPlanilla } from "./precios-planilla";
 
@@ -17,6 +18,7 @@ export function ProductosView({ productos }: { productos: ProductoConVariantes[]
     return productos.filter(
       (p) =>
         p.nombre.toLowerCase().includes(term) ||
+        getProductoNombre(p).toLowerCase().includes(term) ||
         p.codigo?.toLowerCase().includes(term) ||
         p.producto_variantes.some((v) => v.nombre.toLowerCase().includes(term)),
     );

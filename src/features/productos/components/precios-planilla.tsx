@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
 import type { ProductoConVariantes } from "../queries";
+import { getProductoNombre } from "../display";
 import { bulkUpdatePrecios } from "../actions";
 
 type PrecioMap = Record<string, string>;
@@ -141,7 +142,7 @@ export function PreciosPlanilla({ productos }: { productos: ProductoConVariantes
               productos.map((p) => (
                 <React.Fragment key={p.id}>
                   <TableRow className="bg-muted/30">
-                    <TableCell className="font-semibold">{p.nombre}</TableCell>
+                    <TableCell className="font-semibold">{getProductoNombre(p)}</TableCell>
                     <TableCell className="tabular-nums text-muted-foreground">
                       {formatCurrency(p.precio_base)}
                     </TableCell>

@@ -19,7 +19,12 @@ export const pedidoItemSchema = z.object({
 
 export const pedidoSchema = z.object({
   cliente_id: z.string().uuid("Elegí un cliente"),
-  origen: z.enum(ORIGENES).nullable().optional(),
+  origen: z
+    .enum(ORIGENES)
+    .or(z.literal(""))
+    .nullable()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
   fecha_estimada_entrega: z
     .string()
     .optional()

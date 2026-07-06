@@ -24,6 +24,7 @@ import { ORIGENES_PEDIDO } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 import type { Cliente } from "@/types/database";
 import type { ProductoConVariantes } from "@/features/productos/queries";
+import { getProductoNombre } from "@/features/productos/display";
 import { createPedido } from "../actions";
 import {
   pedidoDefaults,
@@ -54,7 +55,8 @@ function buildCatalogo(catalogo: ProductoConVariantes[]): {
 
   for (const p of catalogo) {
     const keyP = `p:${p.id}`;
-    const nombreP = p.codigo ? `${p.codigo} · ${p.nombre}` : p.nombre;
+    const productoNombre = getProductoNombre(p);
+    const nombreP = p.codigo ? `${p.codigo} · ${productoNombre}` : productoNombre;
     options.push({
       value: keyP,
       label: nombreP,
@@ -64,7 +66,7 @@ function buildCatalogo(catalogo: ProductoConVariantes[]): {
       option: { value: keyP, label: nombreP },
       producto_id: p.id,
       variante_id: null,
-      descripcion: p.nombre,
+      descripcion: productoNombre,
       precio: Number(p.precio_base),
     });
 
@@ -77,7 +79,7 @@ function buildCatalogo(catalogo: ProductoConVariantes[]): {
         option: { value: keyV, label },
         producto_id: p.id,
         variante_id: v.id,
-        descripcion: `${p.nombre} - ${v.nombre}`,
+        descripcion: `${productoNombre} - ${v.nombre}`,
         precio,
       });
     }
