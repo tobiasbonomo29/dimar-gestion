@@ -124,12 +124,15 @@ export async function cambiarEstadoPedido(
  *  - si es remito, descuenta el stock una sola vez por pedido (función
  *    idempotente en DB) — la factura no toca stock porque ahora se emite
  *    antes de producción, cuando la mercadería todavía no salió,
- *  - avanza el estado (factura→facturado, remito→despachado) si corresponde.
+ *  - si `avanzarEstado` es true, avanza el estado (factura→facturado,
+ *    remito→despachado) cuando corresponde. Por defecto no mueve el pedido:
+ *    el movimiento en el Kanban queda en manos del usuario.
  * Devuelve el comprobante creado para poder generar el PDF.
  */
 export async function generarComprobante(
   pedidoId: string,
   tipo: TipoComprobante,
+  avanzarEstado = false,
 ): Promise<ActionResult<{ comprobante: Comprobante }>> {
   const supabase = await createClient();
 
@@ -171,9 +174,9 @@ export async function generarComprobante(
     if (stockErr) return { ok: false, error: stockErr.message };
   }
 
-  // Avanza el estado solo hacia adelante.
+  // Avanza el estado solo hacia adelante, y solo si el usuario lo pidió.
   const destino: EstadoPedido = tipo === "factura" ? "facturado" : "despachado";
-  if (ESTADOS_PEDIDO[destino].orden > ESTADOS_PEDIDO[pedido.estado].orden) {
+  if (avanzarEstado && ESTADOS_PEDIDO[destino].orden > ESTADOS_PEDIDO[pedido.estado].orden) {
     await supabase.from("pedidos").update({ estado: destino }).eq("id", pedidoId);
     await supabase.from("historial_estado").insert({
       pedido_id: pedidoId,

@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { FileText, Receipt, Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
-import { TIPOS_COMPROBANTE } from "@/lib/constants";
+import { ESTADOS_PEDIDO, TIPOS_COMPROBANTE } from "@/lib/constants";
 import type { Comprobante, TipoComprobante } from "@/types/database";
 import type { PedidoDetalle } from "../queries";
 import { generarComprobante } from "../actions";
@@ -32,11 +34,12 @@ export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
   const router = useRouter();
   const [loading, setLoading] = React.useState<TipoComprobante | null>(null);
   const [downloading, setDownloading] = React.useState<string | null>(null);
+  const [avanzarEstado, setAvanzarEstado] = React.useState(false);
 
   async function handleGenerar(tipo: TipoComprobante) {
     setLoading(tipo);
     try {
-      const result = await generarComprobante(pedido.id, tipo);
+      const result = await generarComprobante(pedido.id, tipo, avanzarEstado);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -97,6 +100,19 @@ export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
           )}
           Factura
         </Button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Switch
+          id="avanzar-estado"
+          checked={avanzarEstado}
+          onCheckedChange={setAvanzarEstado}
+          disabled={loading !== null || anulado}
+        />
+        <Label htmlFor="avanzar-estado" className="text-xs font-normal text-muted-foreground">
+          Mover el pedido en el Kanban al generar (remito → {ESTADOS_PEDIDO.despachado.label},
+          factura → {ESTADOS_PEDIDO.facturado.label})
+        </Label>
       </div>
 
       {!pedido.stock_descontado ? (

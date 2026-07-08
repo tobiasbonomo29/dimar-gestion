@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type { EstadoPedido } from "@/types/database";
 import type { PedidoConCliente } from "../queries";
 import { CambiarEstado } from "./cambiar-estado";
+import { ExportarExcelDialog } from "./exportar-excel-dialog";
 
 export function PedidosView({ pedidos }: { pedidos: PedidoConCliente[] }) {
   const [filtro, setFiltro] = React.useState<EstadoPedido | "todos">("todos");
@@ -38,28 +39,34 @@ export function PedidosView({ pedidos }: { pedidos: PedidoConCliente[] }) {
 
       {/* LISTA */}
       <TabsContent value="lista" className="space-y-4">
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant={filtro === "todos" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFiltro("todos")}
-          >
-            Todos ({pedidos.length})
-          </Button>
-          {ESTADOS_PEDIDO_LIST.map((e) => {
-            const count = pedidos.filter((p) => p.estado === e).length;
-            return (
-              <Button
-                key={e}
-                variant={filtro === e ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFiltro(e)}
-              >
-                <span className={cn("h-1.5 w-1.5 rounded-full", ESTADOS_PEDIDO[e].dot)} />
-                {ESTADOS_PEDIDO[e].label} ({count})
-              </Button>
-            );
-          })}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              variant={filtro === "todos" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltro("todos")}
+            >
+              Todos ({pedidos.length})
+            </Button>
+            {ESTADOS_PEDIDO_LIST.map((e) => {
+              const count = pedidos.filter((p) => p.estado === e).length;
+              return (
+                <Button
+                  key={e}
+                  variant={filtro === e ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltro(e)}
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full", ESTADOS_PEDIDO[e].dot)} />
+                  {ESTADOS_PEDIDO[e].label} ({count})
+                </Button>
+              );
+            })}
+          </div>
+          <ExportarExcelDialog
+            pedidos={filtrados}
+            nombreArchivo={filtro === "todos" ? "pedidos" : `pedidos-${filtro}`}
+          />
         </div>
 
         <div className="rounded-lg border">

@@ -9,7 +9,10 @@ import type {
 } from "@/types/database";
 
 export type PedidoConCliente = Pedido & {
-  clientes: Pick<Cliente, "id" | "razon_social"> | null;
+  clientes: Pick<
+    Cliente,
+    "id" | "razon_social" | "direccion" | "telefono" | "email" | "cuit" | "condicion_fiscal"
+  > | null;
 };
 
 export type PedidoDetalle = Pedido & {
@@ -25,7 +28,7 @@ export async function getPedidos(estado?: EstadoPedido): Promise<PedidoConClient
 
   let query = supabase
     .from("pedidos")
-    .select("*, clientes(id, razon_social)")
+    .select("*, clientes(id, razon_social, direccion, telefono, email, cuit, condicion_fiscal)")
     .order("numero", { ascending: false });
 
   if (estado) query = query.eq("estado", estado);
