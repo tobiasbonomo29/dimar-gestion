@@ -150,6 +150,7 @@ export type RemitoItem = {
   descripcion: string;
   cantidad: number;
   unidad: string | null;
+  precio_unitario: number | null;
   created_at: string;
 }
 
@@ -216,7 +217,7 @@ export interface Database {
       };
       remito_items: {
         Row: Row<RemitoItem>;
-        Insert: Insert<RemitoItem, "id" | "created_at">;
+        Insert: Insert<RemitoItem, "id" | "precio_unitario" | "created_at">;
         Update: Update<RemitoItem>;
         Relationships: [];
       };

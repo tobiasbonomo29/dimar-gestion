@@ -6,7 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Remito, RemitoItem } from "@/types/database";
 
-type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad">;
+type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario">;
 
 /** Genera y descarga el PDF de un remito. Carga @react-pdf/renderer on-demand. */
 export async function descargarRemitoPDF(remito: Remito, items: RemitoItemLike[]) {

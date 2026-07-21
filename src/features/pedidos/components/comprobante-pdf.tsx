@@ -95,6 +95,7 @@ export function ComprobantePDF({
             </Text>
             {cliente?.nombre_contacto ? <Text style={styles.blockLine}>{cliente.nombre_contacto}</Text> : null}
             {cliente?.email ? <Text style={styles.blockLine}>{cliente.email}</Text> : null}
+            {cliente?.telefono ? <Text style={styles.blockLine}>{cliente.telefono}</Text> : null}
             {cliente ? (
               <Text style={styles.blockLine}>
                 {CONDICIONES_FISCALES[cliente.condicion_fiscal]}

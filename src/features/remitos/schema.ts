@@ -17,6 +17,11 @@ export const remitoItemSchema = z.object({
     .max(40)
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
+  // Precio opcional: vacío → null (el renglón no lleva importe).
+  precio_unitario: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null ? null : v),
+    z.coerce.number().nonnegative("El precio no puede ser negativo").nullable(),
+  ),
 });
 
 export const remitoSchema = z.object({
@@ -44,6 +49,7 @@ export type RemitoItemFormValues = {
   descripcion: string;
   cantidad: string;
   unidad: string;
+  precio_unitario: string;
 };
 
 export type RemitoFormValues = {
@@ -60,6 +66,7 @@ export const remitoItemDefaults: RemitoItemFormValues = {
   descripcion: "",
   cantidad: "1",
   unidad: "",
+  precio_unitario: "",
 };
 
 export const remitoDefaults: RemitoFormValues = {

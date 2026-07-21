@@ -43,6 +43,7 @@ export async function createRemito(
       descripcion: it.descripcion,
       cantidad: it.cantidad,
       unidad: it.unidad ?? null,
+      precio_unitario: it.precio_unitario ?? null,
     })),
   );
 

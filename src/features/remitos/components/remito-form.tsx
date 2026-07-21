@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/format";
 import type { ProductoConVariantes } from "@/features/productos/queries";
 import { getProductoNombre } from "@/features/productos/display";
 import { createRemito } from "../actions";
@@ -84,6 +85,20 @@ export function RemitoForm({ catalogo }: Props) {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const watchedItems = useWatch({ control, name: "items" });
 
+  // Total en vivo: solo suma los renglones que tienen precio cargado.
+  const { hayPrecios, total } = React.useMemo(() => {
+    let hayPrecios = false;
+    const total = (watchedItems ?? []).reduce((acc, it) => {
+      const precioStr = it?.precio_unitario?.trim();
+      if (!precioStr) return acc;
+      hayPrecios = true;
+      const precio = Number(precioStr) || 0;
+      const cant = Number(it?.cantidad) || 0;
+      return acc + cant * precio;
+    }, 0);
+    return { hayPrecios, total };
+  }, [watchedItems]);
+
   function onSelectCatalogo(index: number, key: string) {
     const entry = catalogoMap.get(key);
     if (!entry) return;
@@ -108,6 +123,7 @@ export function RemitoForm({ catalogo }: Props) {
           descripcion: it.descripcion,
           cantidad: Number(it.cantidad) || 0,
           unidad: it.unidad?.trim() ? it.unidad.trim() : null,
+          precio_unitario: it.precio_unitario?.trim() ? Number(it.precio_unitario) : null,
         })),
       );
     } catch (err) {
@@ -202,7 +218,7 @@ export function RemitoForm({ catalogo }: Props) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_110px_120px_auto] sm:items-end">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_90px_100px_120px_110px_auto] sm:items-end">
                     <div className="col-span-2 grid gap-1 sm:col-span-1">
                       <Label className="text-xs">Descripción *</Label>
                       <Input className="h-8" {...register(`items.${index}.descripcion`)} />
@@ -224,6 +240,28 @@ export function RemitoForm({ catalogo }: Props) {
                         placeholder="unidad, caja..."
                         {...register(`items.${index}.unidad`)}
                       />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label className="text-xs">Precio unit.</Label>
+                      <Input
+                        className="h-8"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Opcional"
+                        {...register(`items.${index}.precio_unitario`)}
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label className="text-xs">Subtotal</Label>
+                      <div className="flex h-8 items-center text-sm tabular-nums text-muted-foreground">
+                        {watchedItems?.[index]?.precio_unitario?.trim()
+                          ? formatCurrency(
+                              (Number(watchedItems[index]?.cantidad) || 0) *
+                                (Number(watchedItems[index]?.precio_unitario) || 0),
+                            )
+                          : "—"}
+                      </div>
                     </div>
                     <Button
                       type="button"
@@ -254,9 +292,15 @@ export function RemitoForm({ catalogo }: Props) {
               <span className="text-muted-foreground">Renglones</span>
               <span className="tabular-nums">{watchedItems?.length ?? 0}</span>
             </div>
+            {hayPrecios && (
+              <div className="flex items-center justify-between border-t pt-3 text-base font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">{formatCurrency(total)}</span>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              El remito documenta el envío de mercadería. No modifica stock ni la cuenta
-              corriente del cliente.
+              El precio por renglón es opcional. El remito documenta el envío de mercadería:
+              no modifica stock ni la cuenta corriente del cliente.
             </p>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { EMPRESA } from "@/lib/constants";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import type { Remito, RemitoItem } from "@/types/database";
 
 const styles = StyleSheet.create({
@@ -29,9 +29,23 @@ const styles = StyleSheet.create({
   tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#eee" },
   th: { fontSize: 8.5, fontFamily: "Helvetica-Bold", padding: 6, color: "#333" },
   td: { fontSize: 9, padding: 6 },
+  // Sin precios
   colDesc: { width: "70%" },
   colCant: { width: "15%", textAlign: "right" },
   colUnidad: { width: "15%", textAlign: "left" },
+  // Con precios
+  colDescP: { width: "40%" },
+  colCantP: { width: "12%", textAlign: "right" },
+  colUnidadP: { width: "13%", textAlign: "left" },
+  colPrecioP: { width: "17%", textAlign: "right" },
+  colSubtotalP: { width: "18%", textAlign: "right" },
+  totalsBox: { marginTop: 12, alignItems: "flex-end" },
+  totalFinalRow: {
+    flexDirection: "row", width: 220, justifyContent: "space-between",
+    borderTopWidth: 1, borderTopColor: "#1a1a1a", marginTop: 4, paddingTop: 4,
+  },
+  totalFinalLabel: { fontSize: 11, fontFamily: "Helvetica-Bold" },
+  totalFinalValue: { fontSize: 11, fontFamily: "Helvetica-Bold", textAlign: "right" },
   notasBox: { marginTop: 14 },
   notasLabel: { fontSize: 8, color: "#888", textTransform: "uppercase", marginBottom: 3, fontFamily: "Helvetica-Bold" },
   notasText: { fontSize: 9.5 },
@@ -44,7 +58,7 @@ const styles = StyleSheet.create({
   },
 });
 
-type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad">;
+type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario">;
 
 export function RemitoPDF({
   remito,
@@ -53,6 +67,13 @@ export function RemitoPDF({
   remito: Remito;
   items: RemitoItemLike[];
 }) {
+  // Si algún renglón tiene precio, el remito muestra importes (precio, subtotal, total).
+  const conPrecios = items.some((it) => it.precio_unitario != null);
+  const total = items.reduce(
+    (acc, it) => acc + (it.precio_unitario != null ? Number(it.cantidad) * Number(it.precio_unitario) : 0),
+    0,
+  );
+
   return (
     <Document title={`REMITO N°${remito.numero} - ${EMPRESA.nombre}`} author={EMPRESA.nombre}>
       <Page size="A4" style={styles.page}>
@@ -90,20 +111,58 @@ export function RemitoPDF({
         </View>
 
         {/* Mercadería */}
-        <View style={styles.table}>
-          <View style={styles.tableHead}>
-            <Text style={[styles.th, styles.colDesc]}>Descripción</Text>
-            <Text style={[styles.th, styles.colCant]}>Cantidad</Text>
-            <Text style={[styles.th, styles.colUnidad]}>Unidad</Text>
-          </View>
-          {items.map((it, i) => (
-            <View style={styles.tableRow} key={i} wrap={false}>
-              <Text style={[styles.td, styles.colDesc]}>{it.descripcion}</Text>
-              <Text style={[styles.td, styles.colCant]}>{formatNumber(it.cantidad)}</Text>
-              <Text style={[styles.td, styles.colUnidad]}>{it.unidad ?? "—"}</Text>
+        {conPrecios ? (
+          <View style={styles.table}>
+            <View style={styles.tableHead}>
+              <Text style={[styles.th, styles.colDescP]}>Descripción</Text>
+              <Text style={[styles.th, styles.colCantP]}>Cantidad</Text>
+              <Text style={[styles.th, styles.colUnidadP]}>Unidad</Text>
+              <Text style={[styles.th, styles.colPrecioP]}>Precio unit.</Text>
+              <Text style={[styles.th, styles.colSubtotalP]}>Subtotal</Text>
             </View>
-          ))}
-        </View>
+            {items.map((it, i) => {
+              const tienePrecio = it.precio_unitario != null;
+              const subtotal = tienePrecio ? Number(it.cantidad) * Number(it.precio_unitario) : null;
+              return (
+                <View style={styles.tableRow} key={i} wrap={false}>
+                  <Text style={[styles.td, styles.colDescP]}>{it.descripcion}</Text>
+                  <Text style={[styles.td, styles.colCantP]}>{formatNumber(it.cantidad)}</Text>
+                  <Text style={[styles.td, styles.colUnidadP]}>{it.unidad ?? "—"}</Text>
+                  <Text style={[styles.td, styles.colPrecioP]}>
+                    {tienePrecio ? formatCurrency(it.precio_unitario) : "—"}
+                  </Text>
+                  <Text style={[styles.td, styles.colSubtotalP]}>
+                    {subtotal != null ? formatCurrency(subtotal) : "—"}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.table}>
+            <View style={styles.tableHead}>
+              <Text style={[styles.th, styles.colDesc]}>Descripción</Text>
+              <Text style={[styles.th, styles.colCant]}>Cantidad</Text>
+              <Text style={[styles.th, styles.colUnidad]}>Unidad</Text>
+            </View>
+            {items.map((it, i) => (
+              <View style={styles.tableRow} key={i} wrap={false}>
+                <Text style={[styles.td, styles.colDesc]}>{it.descripcion}</Text>
+                <Text style={[styles.td, styles.colCant]}>{formatNumber(it.cantidad)}</Text>
+                <Text style={[styles.td, styles.colUnidad]}>{it.unidad ?? "—"}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {conPrecios ? (
+          <View style={styles.totalsBox}>
+            <View style={styles.totalFinalRow}>
+              <Text style={styles.totalFinalLabel}>TOTAL</Text>
+              <Text style={styles.totalFinalValue}>{formatCurrency(total)}</Text>
+            </View>
+          </View>
+        ) : null}
 
         {remito.notas ? (
           <View style={styles.notasBox}>
