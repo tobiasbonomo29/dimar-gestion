@@ -131,6 +131,28 @@ export type Pago = {
   created_at: string;
 }
 
+export type Remito = {
+  id: string;
+  numero: number;
+  fecha: string;
+  destinatario: string;
+  destinatario_direccion: string | null;
+  destinatario_cuit: string | null;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RemitoItem = {
+  id: string;
+  remito_id: string;
+  producto_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  unidad: string | null;
+  created_at: string;
+}
+
 type Row<T> = T;
 type Insert<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Update<T> = Partial<T>;
@@ -184,6 +206,18 @@ export interface Database {
         Row: Row<Pago>;
         Insert: Insert<Pago, "id" | "pedido_id" | "fecha" | "medio_pago" | "nota" | "created_at">;
         Update: Update<Pago>;
+        Relationships: [];
+      };
+      remitos: {
+        Row: Row<Remito>;
+        Insert: Insert<Remito, "id" | "numero" | "fecha" | "created_at" | "updated_at">;
+        Update: Update<Remito>;
+        Relationships: [];
+      };
+      remito_items: {
+        Row: Row<RemitoItem>;
+        Insert: Insert<RemitoItem, "id" | "created_at">;
+        Update: Update<RemitoItem>;
         Relationships: [];
       };
     };

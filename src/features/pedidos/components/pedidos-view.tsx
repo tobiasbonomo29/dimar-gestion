@@ -18,11 +18,17 @@ import { ESTADOS_PEDIDO, ESTADOS_PEDIDO_LIST } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EstadoPedido } from "@/types/database";
-import type { PedidoConCliente } from "../queries";
+import type { PedidoConCliente, CobranzaPedido } from "../queries";
 import { CambiarEstado } from "./cambiar-estado";
 import { ExportarExcelDialog } from "./exportar-excel-dialog";
 
-export function PedidosView({ pedidos }: { pedidos: PedidoConCliente[] }) {
+export function PedidosView({
+  pedidos,
+  cobranza,
+}: {
+  pedidos: PedidoConCliente[];
+  cobranza: Record<string, CobranzaPedido>;
+}) {
   const [filtro, setFiltro] = React.useState<EstadoPedido | "todos">("todos");
 
   const filtrados = React.useMemo(
@@ -65,6 +71,7 @@ export function PedidosView({ pedidos }: { pedidos: PedidoConCliente[] }) {
           </div>
           <ExportarExcelDialog
             pedidos={filtrados}
+            cobranza={cobranza}
             nombreArchivo={filtro === "todos" ? "pedidos" : `pedidos-${filtro}`}
           />
         </div>

@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPedidos } from "@/features/pedidos/queries";
+import { getPedidos, getCobranzaPorPedido } from "@/features/pedidos/queries";
 import { PedidosView } from "@/features/pedidos/components/pedidos-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function PedidosPage() {
-  const pedidos = await getPedidos();
+  const [pedidos, cobranza] = await Promise.all([getPedidos(), getCobranzaPorPedido()]);
 
   return (
     <div className="space-y-6">
@@ -26,7 +26,7 @@ export default async function PedidosPage() {
         </Button>
       </div>
 
-      <PedidosView pedidos={pedidos} />
+      <PedidosView pedidos={pedidos} cobranza={cobranza} />
     </div>
   );
 }

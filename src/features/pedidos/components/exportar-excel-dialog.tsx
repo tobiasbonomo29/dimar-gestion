@@ -15,10 +15,15 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ESTADOS_PEDIDO, CONDICIONES_FISCALES, ORIGENES_PEDIDO } from "@/lib/constants";
+import {
+  ESTADOS_PEDIDO,
+  ESTADOS_GENERAN_DEUDA,
+  CONDICIONES_FISCALES,
+  ORIGENES_PEDIDO,
+} from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/export-excel";
-import type { PedidoConCliente } from "../queries";
+import type { PedidoConCliente, CobranzaPedido } from "../queries";
 
 type ColumnaKey =
   | "numero"
@@ -33,9 +38,32 @@ type ColumnaKey =
   | "fecha_estimada_entrega"
   | "origen"
   | "total"
+  | "estado_cobro"
+  | "cobrado_monto"
+  | "pendiente_monto"
   | "notas";
 
-const COLUMNAS: { key: ColumnaKey; label: string; get: (p: PedidoConCliente) => string | number }[] = [
+/** Estado de cobro derivado de la imputación de pagos (FIFO por cliente). */
+function estadoCobro(
+  p: PedidoConCliente,
+  cobranza: Record<string, CobranzaPedido>,
+): "Cobrado" | "Parcial" | "Pendiente" | "No facturado" {
+  if (!ESTADOS_GENERAN_DEUDA.includes(p.estado)) return "No facturado";
+  const c = cobranza[p.id];
+  const pendiente = c?.pendiente ?? Number(p.total);
+  const pagado = c?.pagado ?? 0;
+  if (pendiente <= 0.01) return "Cobrado";
+  if (pagado > 0.01) return "Parcial";
+  return "Pendiente";
+}
+
+type Columna = {
+  key: ColumnaKey;
+  label: string;
+  get: (p: PedidoConCliente, cobranza: Record<string, CobranzaPedido>) => string | number;
+};
+
+const COLUMNAS: Columna[] = [
   { key: "numero", label: "N° de pedido", get: (p) => p.numero },
   { key: "cliente", label: "Cliente", get: (p) => p.clientes?.razon_social ?? "" },
   { key: "direccion", label: "Dirección", get: (p) => p.clientes?.direccion ?? "" },
@@ -56,6 +84,20 @@ const COLUMNAS: { key: ColumnaKey; label: string; get: (p: PedidoConCliente) => 
   },
   { key: "origen", label: "Origen", get: (p) => (p.origen ? ORIGENES_PEDIDO[p.origen] : "") },
   { key: "total", label: "Total", get: (p) => Number(p.total) },
+  { key: "estado_cobro", label: "Estado de cobro", get: (p, cobranza) => estadoCobro(p, cobranza) },
+  {
+    key: "cobrado_monto",
+    label: "Cobrado",
+    get: (p, cobranza) => cobranza[p.id]?.pagado ?? 0,
+  },
+  {
+    key: "pendiente_monto",
+    label: "Pendiente de cobro",
+    get: (p, cobranza) =>
+      ESTADOS_GENERAN_DEUDA.includes(p.estado)
+        ? cobranza[p.id]?.pendiente ?? Number(p.total)
+        : 0,
+  },
   { key: "notas", label: "Notas", get: (p) => p.notas ?? "" },
 ];
 
@@ -67,13 +109,16 @@ const DEFAULT_SELECCION: ColumnaKey[] = [
   "estado",
   "fecha_estimada_entrega",
   "total",
+  "estado_cobro",
 ];
 
 export function ExportarExcelDialog({
   pedidos,
+  cobranza,
   nombreArchivo = "pedidos",
 }: {
   pedidos: PedidoConCliente[];
+  cobranza: Record<string, CobranzaPedido>;
   nombreArchivo?: string;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -92,7 +137,7 @@ export function ExportarExcelDialog({
     const columnas = COLUMNAS.filter((c) => seleccion.has(c.key));
     const rows = pedidos.map((p) => {
       const row: Record<string, string | number> = {};
-      for (const col of columnas) row[col.label] = col.get(p);
+      for (const col of columnas) row[col.label] = col.get(p, cobranza);
       return row;
     });
     const fecha = new Date().toISOString().slice(0, 10);
