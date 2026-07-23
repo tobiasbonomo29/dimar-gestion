@@ -156,6 +156,23 @@ export type RemitoItem = {
   created_at: string;
 }
 
+export type Medicamento = {
+  id: string;
+  unidad_id: string;
+  nro_registro: string;
+  descripcion: string;
+  droga: string | null;
+  laboratorio: string | null;
+  presentacion: string | null;
+  precio: number;
+  codigo_barras: string | null;
+  troquel: string | null;
+  activo: boolean;
+  actualizado_en: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Egreso = {
   id: string;
   unidad_id: string;
@@ -258,6 +275,12 @@ export interface Database {
         Row: Row<Egreso>;
         Insert: Insert<Egreso, "id" | "unidad_id" | "fecha" | "medio_pago" | "created_at" | "updated_at">;
         Update: Update<Egreso>;
+        Relationships: [];
+      };
+      medicamentos: {
+        Row: Row<Medicamento>;
+        Insert: Insert<Medicamento, "id" | "unidad_id" | "activo" | "actualizado_en" | "created_at" | "updated_at">;
+        Update: Update<Medicamento>;
         Relationships: [];
       };
       unidades: {
