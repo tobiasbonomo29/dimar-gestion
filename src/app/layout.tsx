@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { EMPRESA } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Dimar SRL — Gestión de Pedidos",
+  title: `${EMPRESA.nombre} — Gestión de Pedidos`,
   description: "Sistema de gestión de pedidos, cotizaciones y trazabilidad.",
 };
 

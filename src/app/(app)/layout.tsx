@@ -3,6 +3,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/server";
+import { EMPRESA } from "@/lib/constants";
 
 export default async function AppLayout({
   children,
@@ -20,7 +21,7 @@ export default async function AppLayout({
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
         <div className="flex h-14 items-center border-b px-5">
           <Link href="/" className="flex flex-col leading-tight">
-            <span className="text-sm font-bold">Dimar SRL</span>
+            <span className="text-sm font-bold">{EMPRESA.nombre}</span>
             <span className="text-xs text-muted-foreground">Gestión de pedidos</span>
           </Link>
         </div>
