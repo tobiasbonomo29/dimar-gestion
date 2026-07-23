@@ -3,7 +3,8 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/server";
-import { EMPRESA } from "@/lib/constants";
+import { EmpresaProvider } from "@/components/empresa-provider";
+import { getEmpresaActual } from "@/features/unidades/queries";
 
 export default async function AppLayout({
   children,
@@ -11,17 +12,19 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, empresa] = await Promise.all([
+    supabase.auth.getUser(),
+    getEmpresaActual(),
+  ]);
 
   return (
+    <EmpresaProvider empresa={empresa}>
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
         <div className="flex h-14 items-center border-b px-5">
           <Link href="/" className="flex flex-col leading-tight">
-            <span className="text-sm font-bold">{EMPRESA.nombre}</span>
+            <span className="text-sm font-bold">{empresa.nombre}</span>
             <span className="text-xs text-muted-foreground">Gestión de pedidos</span>
           </Link>
         </div>
@@ -39,5 +42,6 @@ export default async function AppLayout({
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
     </div>
+    </EmpresaProvider>
   );
 }

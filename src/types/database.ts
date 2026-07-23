@@ -154,6 +154,22 @@ export type RemitoItem = {
   created_at: string;
 }
 
+export type Unidad = {
+  id: string;
+  nombre: string;
+  cuit: string | null;
+  direccion: string | null;
+  email: string | null;
+  telefono: string | null;
+  created_at: string;
+}
+
+export type Perfil = {
+  user_id: string;
+  unidad_id: string;
+  created_at: string;
+}
+
 type Row<T> = T;
 type Insert<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Update<T> = Partial<T>;
@@ -219,6 +235,18 @@ export interface Database {
         Row: Row<RemitoItem>;
         Insert: Insert<RemitoItem, "id" | "precio_unitario" | "created_at">;
         Update: Update<RemitoItem>;
+        Relationships: [];
+      };
+      unidades: {
+        Row: Row<Unidad>;
+        Insert: Insert<Unidad, "id" | "created_at">;
+        Update: Update<Unidad>;
+        Relationships: [];
+      };
+      perfiles: {
+        Row: Row<Perfil>;
+        Insert: Insert<Perfil, "created_at">;
+        Update: Update<Perfil>;
         Relationships: [];
       };
     };

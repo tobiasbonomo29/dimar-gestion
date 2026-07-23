@@ -5,8 +5,9 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { EMPRESA, CONDICIONES_FISCALES, ESTADOS_PEDIDO } from "@/lib/constants";
+import { CONDICIONES_FISCALES, ESTADOS_PEDIDO } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
+import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle } from "../queries";
 
 const styles = StyleSheet.create({
@@ -96,24 +97,30 @@ const styles = StyleSheet.create({
   },
 });
 
-export function CotizacionPDF({ pedido }: { pedido: PedidoDetalle }) {
+export function CotizacionPDF({
+  pedido,
+  empresa,
+}: {
+  pedido: PedidoDetalle;
+  empresa: Empresa;
+}) {
   const cliente = pedido.clientes;
 
   return (
     <Document
-      title={`Cotización #${pedido.numero} - ${EMPRESA.nombre}`}
-      author={EMPRESA.nombre}
+      title={`Cotización #${pedido.numero} - ${empresa.nombre}`}
+      author={empresa.nombre}
     >
       <Page size="A4" style={styles.page}>
         {/* Membrete */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.empresaNombre}>{EMPRESA.nombre}</Text>
-            {EMPRESA.cuit ? <Text style={styles.empresaInfo}>CUIT: {EMPRESA.cuit}</Text> : null}
-            {EMPRESA.direccion ? <Text style={styles.empresaInfo}>{EMPRESA.direccion}</Text> : null}
-            {(EMPRESA.email || EMPRESA.telefono) ? (
+            <Text style={styles.empresaNombre}>{empresa.nombre}</Text>
+            {empresa.cuit ? <Text style={styles.empresaInfo}>CUIT: {empresa.cuit}</Text> : null}
+            {empresa.direccion ? <Text style={styles.empresaInfo}>{empresa.direccion}</Text> : null}
+            {(empresa.email || empresa.telefono) ? (
               <Text style={styles.empresaInfo}>
-                {[EMPRESA.email, EMPRESA.telefono].filter(Boolean).join("  ·  ")}
+                {[empresa.email, empresa.telefono].filter(Boolean).join("  ·  ")}
               </Text>
             ) : null}
           </View>
@@ -212,7 +219,7 @@ export function CotizacionPDF({ pedido }: { pedido: PedidoDetalle }) {
         </View>
 
         <Text style={styles.footer} fixed>
-          {EMPRESA.nombre} — Cotización generada el {formatDate(new Date())}. Este documento no es una factura.
+          {empresa.nombre} — Cotización generada el {formatDate(new Date())}. Este documento no es una factura.
         </Text>
       </Page>
     </Document>

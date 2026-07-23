@@ -4,10 +4,12 @@ import * as React from "react";
 import { toast } from "sonner";
 import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEmpresa } from "@/components/empresa-provider";
 import type { PedidoDetalle } from "../queries";
 
 export function DescargarCotizacion({ pedido }: { pedido: PedidoDetalle }) {
   const [loading, setLoading] = React.useState(false);
+  const empresa = useEmpresa();
 
   async function handleDownload() {
     setLoading(true);
@@ -17,7 +19,7 @@ export function DescargarCotizacion({ pedido }: { pedido: PedidoDetalle }) {
         import("@react-pdf/renderer"),
         import("./cotizacion-pdf"),
       ]);
-      const blob = await pdf(<CotizacionPDF pedido={pedido} />).toBlob();
+      const blob = await pdf(<CotizacionPDF pedido={pedido} empresa={empresa} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

@@ -5,9 +5,10 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { EMPRESA, CONDICIONES_FISCALES } from "@/lib/constants";
+import { CONDICIONES_FISCALES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Comprobante, TipoComprobante } from "@/types/database";
+import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle } from "../queries";
 
 const styles = StyleSheet.create({
@@ -58,24 +59,26 @@ const TITULOS: Record<TipoComprobante, string> = { remito: "REMITO", factura: "F
 export function ComprobantePDF({
   pedido,
   comprobante,
+  empresa,
 }: {
   pedido: PedidoDetalle;
   comprobante: Comprobante;
+  empresa: Empresa;
 }) {
   const cliente = pedido.clientes;
   const esFactura = comprobante.tipo === "factura";
 
   return (
-    <Document title={`${TITULOS[comprobante.tipo]} N°${comprobante.numero} - ${EMPRESA.nombre}`} author={EMPRESA.nombre}>
+    <Document title={`${TITULOS[comprobante.tipo]} N°${comprobante.numero} - ${empresa.nombre}`} author={empresa.nombre}>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.empresaNombre}>{EMPRESA.nombre}</Text>
-            {EMPRESA.cuit ? <Text style={styles.empresaInfo}>CUIT: {EMPRESA.cuit}</Text> : null}
-            {EMPRESA.direccion ? <Text style={styles.empresaInfo}>{EMPRESA.direccion}</Text> : null}
-            {(EMPRESA.email || EMPRESA.telefono) ? (
+            <Text style={styles.empresaNombre}>{empresa.nombre}</Text>
+            {empresa.cuit ? <Text style={styles.empresaInfo}>CUIT: {empresa.cuit}</Text> : null}
+            {empresa.direccion ? <Text style={styles.empresaInfo}>{empresa.direccion}</Text> : null}
+            {(empresa.email || empresa.telefono) ? (
               <Text style={styles.empresaInfo}>
-                {[EMPRESA.email, EMPRESA.telefono].filter(Boolean).join("  ·  ")}
+                {[empresa.email, empresa.telefono].filter(Boolean).join("  ·  ")}
               </Text>
             ) : null}
           </View>
@@ -161,7 +164,7 @@ export function ComprobantePDF({
         ) : null}
 
         <Text style={styles.footer} fixed>
-          {EMPRESA.nombre} — {TITULOS[comprobante.tipo]} interno generado el {formatDate(comprobante.fecha)}.
+          {empresa.nombre} — {TITULOS[comprobante.tipo]} interno generado el {formatDate(comprobante.fecha)}.
           {" "}Documento no válido como factura fiscal (AFIP).
         </Text>
       </Page>

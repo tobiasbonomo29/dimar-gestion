@@ -5,9 +5,9 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { EMPRESA } from "@/lib/constants";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import type { Remito, RemitoItem } from "@/types/database";
+import type { Empresa } from "@/features/unidades/queries";
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 40, paddingVertical: 36, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -63,9 +63,11 @@ type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "
 export function RemitoPDF({
   remito,
   items,
+  empresa,
 }: {
   remito: Remito;
   items: RemitoItemLike[];
+  empresa: Empresa;
 }) {
   // Si algún renglón tiene precio, el remito muestra importes (precio, subtotal, total).
   const conPrecios = items.some((it) => it.precio_unitario != null);
@@ -75,16 +77,16 @@ export function RemitoPDF({
   );
 
   return (
-    <Document title={`REMITO N°${remito.numero} - ${EMPRESA.nombre}`} author={EMPRESA.nombre}>
+    <Document title={`REMITO N°${remito.numero} - ${empresa.nombre}`} author={empresa.nombre}>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.empresaNombre}>{EMPRESA.nombre}</Text>
-            {EMPRESA.cuit ? <Text style={styles.empresaInfo}>CUIT: {EMPRESA.cuit}</Text> : null}
-            {EMPRESA.direccion ? <Text style={styles.empresaInfo}>{EMPRESA.direccion}</Text> : null}
-            {(EMPRESA.email || EMPRESA.telefono) ? (
+            <Text style={styles.empresaNombre}>{empresa.nombre}</Text>
+            {empresa.cuit ? <Text style={styles.empresaInfo}>CUIT: {empresa.cuit}</Text> : null}
+            {empresa.direccion ? <Text style={styles.empresaInfo}>{empresa.direccion}</Text> : null}
+            {(empresa.email || empresa.telefono) ? (
               <Text style={styles.empresaInfo}>
-                {[EMPRESA.email, EMPRESA.telefono].filter(Boolean).join("  ·  ")}
+                {[empresa.email, empresa.telefono].filter(Boolean).join("  ·  ")}
               </Text>
             ) : null}
           </View>
@@ -177,7 +179,7 @@ export function RemitoPDF({
         </View>
 
         <Text style={styles.footer} fixed>
-          {EMPRESA.nombre} — Remito interno generado el {formatDate(remito.fecha)}.
+          {empresa.nombre} — Remito interno generado el {formatDate(remito.fecha)}.
           {" "}Documento no válido como comprobante fiscal (AFIP).
         </Text>
       </Page>

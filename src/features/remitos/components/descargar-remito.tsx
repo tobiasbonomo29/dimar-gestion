@@ -4,17 +4,19 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEmpresa } from "@/components/empresa-provider";
 import type { Remito, RemitoItem } from "@/types/database";
+import type { Empresa } from "@/features/unidades/queries";
 
 type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario">;
 
 /** Genera y descarga el PDF de un remito. Carga @react-pdf/renderer on-demand. */
-export async function descargarRemitoPDF(remito: Remito, items: RemitoItemLike[]) {
+export async function descargarRemitoPDF(remito: Remito, items: RemitoItemLike[], empresa: Empresa) {
   const [{ pdf }, { RemitoPDF }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("./remito-pdf"),
   ]);
-  const blob = await pdf(<RemitoPDF remito={remito} items={items} />).toBlob();
+  const blob = await pdf(<RemitoPDF remito={remito} items={items} empresa={empresa} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -33,11 +35,12 @@ export function DescargarRemitoButton({
   items: RemitoItemLike[];
 }) {
   const [loading, setLoading] = React.useState(false);
+  const empresa = useEmpresa();
 
   async function handleDownload() {
     setLoading(true);
     try {
-      await descargarRemitoPDF(remito, items);
+      await descargarRemitoPDF(remito, items, empresa);
     } catch (err) {
       console.error(err);
       toast.error("No se pudo generar el PDF.");

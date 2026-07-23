@@ -8,18 +8,22 @@ import { FileText, Receipt, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useEmpresa } from "@/components/empresa-provider";
 import { formatDate } from "@/lib/format";
 import { ESTADOS_PEDIDO, TIPOS_COMPROBANTE } from "@/lib/constants";
 import type { Comprobante, TipoComprobante } from "@/types/database";
+import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle } from "../queries";
 import { generarComprobante } from "../actions";
 
-async function descargarPDF(pedido: PedidoDetalle, comprobante: Comprobante) {
+async function descargarPDF(pedido: PedidoDetalle, comprobante: Comprobante, empresa: Empresa) {
   const [{ pdf }, { ComprobantePDF }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("./comprobante-pdf"),
   ]);
-  const blob = await pdf(<ComprobantePDF pedido={pedido} comprobante={comprobante} />).toBlob();
+  const blob = await pdf(
+    <ComprobantePDF pedido={pedido} comprobante={comprobante} empresa={empresa} />,
+  ).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -32,6 +36,7 @@ async function descargarPDF(pedido: PedidoDetalle, comprobante: Comprobante) {
 
 export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
   const router = useRouter();
+  const empresa = useEmpresa();
   const [loading, setLoading] = React.useState<TipoComprobante | null>(null);
   const [downloading, setDownloading] = React.useState<string | null>(null);
   const [avanzarEstado, setAvanzarEstado] = React.useState(false);
@@ -47,7 +52,7 @@ export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
       toast.success(
         `${TIPOS_COMPROBANTE[tipo]} N° ${result.data.comprobante.numero} generado`,
       );
-      await descargarPDF(pedido, result.data.comprobante);
+      await descargarPDF(pedido, result.data.comprobante, empresa);
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -60,7 +65,7 @@ export function ComprobantesPanel({ pedido }: { pedido: PedidoDetalle }) {
   async function handleDescargar(comprobante: Comprobante) {
     setDownloading(comprobante.id);
     try {
-      await descargarPDF(pedido, comprobante);
+      await descargarPDF(pedido, comprobante, empresa);
     } catch (err) {
       console.error(err);
       toast.error("No se pudo generar el PDF.");

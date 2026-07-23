@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEmpresa } from "@/components/empresa-provider";
 import { formatCurrency } from "@/lib/format";
 import type { ProductoConVariantes } from "@/features/productos/queries";
 import { getProductoNombre } from "@/features/productos/display";
@@ -66,6 +67,8 @@ export function RemitoForm({ catalogo }: Props) {
   const router = useRouter();
   // Guarda qué opción de catálogo se eligió en cada fila (para el combobox).
   const [itemKeys, setItemKeys] = React.useState<Record<number, string>>({});
+
+  const empresa = useEmpresa();
 
   const { options: catalogoOptions, map: catalogoMap } = React.useMemo(
     () => buildCatalogo(catalogo),
@@ -125,6 +128,7 @@ export function RemitoForm({ catalogo }: Props) {
           unidad: it.unidad?.trim() ? it.unidad.trim() : null,
           precio_unitario: it.precio_unitario?.trim() ? Number(it.precio_unitario) : null,
         })),
+        empresa,
       );
     } catch (err) {
       console.error(err);
