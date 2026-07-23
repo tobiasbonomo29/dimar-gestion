@@ -5,6 +5,7 @@ import type {
   MedioPago,
   OrigenPedido,
   TipoComprobante,
+  TipoEgreso,
 } from "@/types/database";
 
 /**
@@ -105,6 +106,25 @@ export const TIPOS_COMPROBANTE: Record<TipoComprobante, string> = {
   remito: "Remito",
   factura: "Factura",
 };
+
+export const TIPOS_EGRESO: Record<TipoEgreso, string> = {
+  compra: "Compra",
+  erogacion: "Erogación",
+};
+
+/** Categorías sugeridas para compras y erogaciones (el usuario puede escribir otra). */
+export const CATEGORIAS_EGRESO_SUGERIDAS = [
+  "Mercadería",
+  "Materia prima",
+  "Sueldos",
+  "Alquiler",
+  "Servicios",
+  "Impuestos",
+  "Fletes",
+  "Mantenimiento",
+  "Combustible",
+  "Otros",
+];
 
 export const EMPRESA = {
   nombre: process.env.NEXT_PUBLIC_EMPRESA_NOMBRE ?? "Dimar SRL",

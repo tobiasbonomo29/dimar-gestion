@@ -27,6 +27,8 @@ export type TipoComprobante = "remito" | "factura";
 
 export type MedioPago = "efectivo" | "transferencia" | "cheque" | "tarjeta" | "otro";
 
+export type TipoEgreso = "compra" | "erogacion";
+
 export type Cliente = {
   id: string;
   razon_social: string;
@@ -154,6 +156,21 @@ export type RemitoItem = {
   created_at: string;
 }
 
+export type Egreso = {
+  id: string;
+  unidad_id: string;
+  tipo: TipoEgreso;
+  fecha: string;
+  concepto: string;
+  proveedor: string | null;
+  categoria: string | null;
+  monto: number;
+  medio_pago: MedioPago;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Unidad = {
   id: string;
   nombre: string;
@@ -235,6 +252,12 @@ export interface Database {
         Row: Row<RemitoItem>;
         Insert: Insert<RemitoItem, "id" | "precio_unitario" | "created_at">;
         Update: Update<RemitoItem>;
+        Relationships: [];
+      };
+      egresos: {
+        Row: Row<Egreso>;
+        Insert: Insert<Egreso, "id" | "unidad_id" | "fecha" | "medio_pago" | "created_at" | "updated_at">;
+        Update: Update<Egreso>;
         Relationships: [];
       };
       unidades: {

@@ -23,6 +23,24 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0.625rem;
+
+  /* Colores de gráficos (paleta validada dataviz — modo claro) */
+  --viz-ventas: #2a78d6;      /* azul */
+  --viz-egresos: #eb6834;     /* naranja */
+  --viz-compra: #eda100;      /* amarillo */
+  --viz-erogacion: #4a3aa7;   /* violeta */
+  --viz-pos: #0ca30c;         /* verde (resultado positivo) */
+  --viz-neg: #d03b3b;         /* rojo (resultado negativo) */
+  --viz-grid: #e1e0d9;
+  --viz-axis: #898781;
+  --viz-c1: #2a78d6;
+  --viz-c2: #1baf7a;
+  --viz-c3: #eda100;
+  --viz-c4: #4a3aa7;
+  --viz-c5: #e34948;
+  --viz-c6: #e87ba4;
+  --viz-c7: #eb6834;
+  --viz-c8: #898781;
 }
 
 .dark {
@@ -45,6 +63,24 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.556 0 0);
+
+  /* Colores de gráficos (paleta validada dataviz — modo oscuro) */
+  --viz-ventas: #3987e5;
+  --viz-egresos: #d95926;
+  --viz-compra: #c98500;
+  --viz-erogacion: #9085e9;
+  --viz-pos: #0ca30c;
+  --viz-neg: #e66767;
+  --viz-grid: #2c2c2a;
+  --viz-axis: #898781;
+  --viz-c1: #3987e5;
+  --viz-c2: #199e70;
+  --viz-c3: #c98500;
+  --viz-c4: #9085e9;
+  --viz-c5: #e66767;
+  --viz-c6: #d55181;
+  --viz-c7: #d95926;
+  --viz-c8: #898781;
 }
 
 @theme inline {
