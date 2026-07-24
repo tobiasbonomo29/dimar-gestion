@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-const CATEGORIAS = ["gel_refrigerante", "sachet", "bolsa"] as const;
-
 const optionalText = z
   .string()
   .trim()
@@ -30,7 +28,7 @@ export const varianteSchema = z.object({
 export const productoSchema = z.object({
   codigo: optionalText,
   nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200),
-  categoria: z.enum(CATEGORIAS, { required_error: "Elegí una categoría" }),
+  categoria: z.string().trim().min(1, "Elegí o creá una categoría").max(60),
   descripcion: optionalText,
   unidad_medida: z.string().trim().min(1).max(50).default("unidad"),
   precio_base: z.coerce.number().nonnegative("El precio base no puede ser negativo"),
@@ -55,7 +53,7 @@ export type VarianteFormValues = {
 export type ProductoFormValues = {
   codigo?: string;
   nombre: string;
-  categoria: (typeof CATEGORIAS)[number];
+  categoria: string;
   descripcion?: string;
   unidad_medida: string;
   precio_base: string;
@@ -75,7 +73,7 @@ export const varianteDefaults: VarianteFormValues = {
 export const productoDefaults: ProductoFormValues = {
   codigo: "",
   nombre: "",
-  categoria: "gel_refrigerante",
+  categoria: "",
   descripcion: "",
   unidad_medida: "unidad",
   precio_base: "0",

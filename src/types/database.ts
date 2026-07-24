@@ -10,7 +10,8 @@ export type CondicionFiscal =
   | "consumidor_final"
   | "exento";
 
-export type CategoriaProducto = "gel_refrigerante" | "sachet" | "bolsa";
+// Las categorías de producto ahora son dinámicas (tabla `categorias`, por unidad).
+// productos.categoria guarda el nombre de la categoría como texto.
 
 export type EstadoPedido =
   | "cotizado"
@@ -48,7 +49,7 @@ export type Producto = {
   id: string;
   codigo: string | null;
   nombre: string;
-  categoria: CategoriaProducto;
+  categoria: string;
   descripcion: string | null;
   unidad_medida: string;
   precio_base: number;
@@ -56,6 +57,13 @@ export type Producto = {
   activo: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export type Categoria = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  created_at: string;
 }
 
 export type ProductoVariante = {
@@ -295,6 +303,12 @@ export interface Database {
         Update: Update<Perfil>;
         Relationships: [];
       };
+      categorias: {
+        Row: Row<Categoria>;
+        Insert: Insert<Categoria, "id" | "unidad_id" | "created_at">;
+        Update: Update<Categoria>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -305,7 +319,6 @@ export interface Database {
     };
     Enums: {
       condicion_fiscal: CondicionFiscal;
-      categoria_producto: CategoriaProducto;
       estado_pedido: EstadoPedido;
       origen_pedido: OrigenPedido;
       tipo_comprobante: TipoComprobante;

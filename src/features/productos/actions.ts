@@ -10,6 +10,24 @@ import {
   type BulkPreciosValues,
 } from "./schema";
 
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Asegura que la categoría exista en la tabla `categorias` de la unidad actual.
+ * Idempotente: si ya existe, ignora el conflicto. La unidad_id la pone el
+ * default de la DB (current_unidad_id()).
+ */
+async function ensureCategoria(supabase: SupabaseServer, nombre: string) {
+  const { error } = await supabase
+    .from("categorias")
+    .insert({ nombre })
+    .select("id");
+  // 23505 = ya existe esa categoría en la unidad: es lo esperado, se ignora.
+  if (error && error.code !== "23505") {
+    throw new Error(error.message);
+  }
+}
+
 export async function createProducto(
   values: ProductoFormValues,
 ): Promise<ActionResult<{ id: string }>> {
@@ -20,6 +38,7 @@ export async function createProducto(
   const { variantes, ...producto } = parsed.data;
 
   const supabase = await createClient();
+  await ensureCategoria(supabase, producto.categoria);
   const { data, error } = await supabase
     .from("productos")
     .insert({
@@ -68,6 +87,7 @@ export async function updateProducto(
   }
   const { variantes, ...producto } = parsed.data;
   const supabase = await createClient();
+  await ensureCategoria(supabase, producto.categoria);
 
   const { error } = await supabase
     .from("productos")

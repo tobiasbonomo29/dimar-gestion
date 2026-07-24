@@ -9,7 +9,13 @@ import { getProductoNombre } from "../display";
 import { ProductosClient } from "./productos-client";
 import { PreciosPlanilla } from "./precios-planilla";
 
-export function ProductosView({ productos }: { productos: ProductoConVariantes[] }) {
+export function ProductosView({
+  productos,
+  categorias,
+}: {
+  productos: ProductoConVariantes[];
+  categorias: string[];
+}) {
   const [q, setQ] = React.useState("");
 
   const filtrados = React.useMemo(() => {
@@ -41,7 +47,7 @@ export function ProductosView({ productos }: { productos: ProductoConVariantes[]
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <ProductosClient productos={filtrados} />
+        <ProductosClient productos={filtrados} categorias={categorias} />
       </TabsContent>
 
       <TabsContent value="precios">

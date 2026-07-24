@@ -1,14 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Producto, ProductoVariante, CategoriaProducto } from "@/types/database";
+import type { Producto, ProductoVariante } from "@/types/database";
 
 export type ProductoConVariantes = Producto & {
   producto_variantes: ProductoVariante[];
 };
 
+/** Categorías de la unidad actual (para el selector del formulario de producto). */
+export async function getCategorias(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categorias")
+    .select("nombre")
+    .order("nombre", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((c) => c.nombre);
+}
+
 /** Lista productos con sus variantes, filtrando opcionalmente por texto o categoría. */
 export async function getProductos(opts?: {
   search?: string;
-  categoria?: CategoriaProducto;
+  categoria?: string;
 }): Promise<ProductoConVariantes[]> {
   const supabase = await createClient();
 

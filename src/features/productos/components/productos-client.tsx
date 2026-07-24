@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProductoConVariantes } from "../queries";
@@ -24,7 +23,13 @@ import { getProductoNombre } from "../display";
 import { ProductoFormDialog } from "./producto-form-dialog";
 import { deleteProducto } from "../actions";
 
-export function ProductosClient({ productos }: { productos: ProductoConVariantes[] }) {
+export function ProductosClient({
+  productos,
+  categorias,
+}: {
+  productos: ProductoConVariantes[];
+  categorias: string[];
+}) {
   const router = useRouter();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ProductoConVariantes | null>(null);
@@ -86,7 +91,7 @@ export function ProductosClient({ productos }: { productos: ProductoConVariantes
                   <TableCell className="font-medium">{getProductoNombre(p)}</TableCell>
                   <TableCell>
                     <Badge className="border-slate-200 bg-slate-100 text-slate-700">
-                      {CATEGORIAS_PRODUCTO[p.categoria]}
+                      {p.categoria}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.unidad_medida}</TableCell>
@@ -153,7 +158,12 @@ export function ProductosClient({ productos }: { productos: ProductoConVariantes
         </Table>
       </div>
 
-      <ProductoFormDialog open={formOpen} onOpenChange={setFormOpen} producto={editing} />
+      <ProductoFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        producto={editing}
+        categorias={categorias}
+      />
 
       <ConfirmDialog
         open={Boolean(toDelete)}

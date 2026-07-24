@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ interface Props {
   emptyText?: string;
   /** Contenido opcional al pie del panel (ej. botón "crear nuevo"). */
   footer?: React.ReactNode;
+  /** Si true, permite crear una opción nueva escribiendo un valor inexistente. */
+  creatable?: boolean;
   className?: string;
   id?: string;
 }
@@ -34,6 +36,7 @@ export function Combobox({
   searchPlaceholder = "Buscar...",
   emptyText = "Sin resultados.",
   footer,
+  creatable = false,
   className,
   id,
 }: Props) {
@@ -42,6 +45,21 @@ export function Combobox({
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
+  // Etiqueta a mostrar en el trigger: si el valor no está en las opciones
+  // (ej. una categoría recién creada), muestra el valor tal cual.
+  const triggerLabel = selected?.label ?? (value ? value : null);
+
+  const term = query.trim();
+  const hayMatchExacto = options.some(
+    (o) => o.label.toLowerCase() === term.toLowerCase(),
+  );
+  const mostrarCrear = creatable && term.length > 0 && !hayMatchExacto;
+
+  function elegir(v: string) {
+    onSelect(v);
+    setOpen(false);
+    setQuery("");
+  }
 
   const filtered = React.useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -75,8 +93,8 @@ export function Combobox({
         className="w-full justify-between font-normal"
         onClick={() => setOpen((o) => !o)}
       >
-        <span className={cn(!selected && "text-muted-foreground", "truncate")}>
-          {selected ? selected.label : placeholder}
+        <span className={cn(!triggerLabel && "text-muted-foreground", "truncate")}>
+          {triggerLabel ?? placeholder}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
       </Button>
@@ -94,7 +112,7 @@ export function Combobox({
             />
           </div>
           <div className="max-h-60 overflow-y-auto p-1">
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && !mostrarCrear ? (
               <p className="px-2 py-4 text-center text-sm text-muted-foreground">
                 {emptyText}
               </p>
@@ -103,11 +121,7 @@ export function Combobox({
                 <button
                   key={o.value}
                   type="button"
-                  onClick={() => {
-                    onSelect(o.value);
-                    setOpen(false);
-                    setQuery("");
-                  }}
+                  onClick={() => elegir(o.value)}
                   className="flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                 >
                   <Check
@@ -126,6 +140,16 @@ export function Combobox({
                   </span>
                 </button>
               ))
+            )}
+            {mostrarCrear && (
+              <button
+                type="button"
+                onClick={() => elegir(term)}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-primary hover:bg-accent"
+              >
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="truncate">Crear “{term}”</span>
+              </button>
             )}
           </div>
           {footer && <div className="border-t p-1">{footer}</div>}

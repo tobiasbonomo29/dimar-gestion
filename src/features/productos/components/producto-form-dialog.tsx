@@ -19,15 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CATEGORIAS_PRODUCTO } from "@/lib/constants";
-import type { CategoriaProducto } from "@/types/database";
+import { Combobox } from "@/components/ui/combobox";
 import type { ProductoConVariantes } from "../queries";
 import { createProducto, updateProducto } from "../actions";
 import {
@@ -40,6 +32,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   producto?: ProductoConVariantes | null;
+  /** Categorías existentes de la unidad, para el selector (se puede crear nuevas). */
+  categorias: string[];
 }
 
 function toFormValues(p: ProductoConVariantes): ProductoFormValues {
@@ -63,7 +57,7 @@ function toFormValues(p: ProductoConVariantes): ProductoFormValues {
   };
 }
 
-export function ProductoFormDialog({ open, onOpenChange, producto }: Props) {
+export function ProductoFormDialog({ open, onOpenChange, producto, categorias }: Props) {
   const router = useRouter();
   const isEdit = Boolean(producto);
 
@@ -118,23 +112,21 @@ export function ProductoFormDialog({ open, onOpenChange, producto }: Props) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="categoria">Categoría</Label>
+              <Label htmlFor="categoria">Categoría *</Label>
               <Controller
                 control={control}
                 name="categoria"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="categoria">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(CATEGORIAS_PRODUCTO).map(([value, label]) => (
-                        <SelectItem key={value} value={value as CategoriaProducto}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    id="categoria"
+                    options={categorias.map((c) => ({ value: c, label: c }))}
+                    value={field.value}
+                    onSelect={field.onChange}
+                    creatable
+                    placeholder="Elegí o creá una categoría"
+                    searchPlaceholder="Buscar o escribir una nueva..."
+                    emptyText="Escribí para crear una categoría."
+                  />
                 )}
               />
             </div>

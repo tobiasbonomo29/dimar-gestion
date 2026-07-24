@@ -1,5 +1,4 @@
 import type {
-  CategoriaProducto,
   CondicionFiscal,
   EstadoPedido,
   MedioPago,
@@ -83,11 +82,6 @@ export const MEDIOS_PAGO: Record<MedioPago, string> = {
   otro: "Otro",
 };
 
-export const CATEGORIAS_PRODUCTO: Record<CategoriaProducto, string> = {
-  gel_refrigerante: "Gel refrigerante",
-  sachet: "Sachet",
-  bolsa: "Bolsa",
-};
 
 export const CONDICIONES_FISCALES: Record<CondicionFiscal, string> = {
   responsable_inscripto: "Responsable Inscripto",
