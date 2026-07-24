@@ -22,11 +22,24 @@ export async function getEmpresaActual(): Promise<Empresa> {
     .select("nombre, cuit, direccion, email, telefono")
     .maybeSingle();
 
+  // Sin unidad asociada: membrete por defecto (variables de entorno).
+  if (!data) {
+    return {
+      nombre: EMPRESA.nombre,
+      cuit: EMPRESA.cuit,
+      direccion: EMPRESA.direccion,
+      email: EMPRESA.email,
+      telefono: EMPRESA.telefono,
+    };
+  }
+
+  // Con unidad: se usan SIEMPRE sus propios datos. Los que falten quedan
+  // vacíos (no se mezclan con los de otra unidad ni con las env de Dimar).
   return {
-    nombre: data?.nombre?.trim() || EMPRESA.nombre,
-    cuit: data?.cuit ?? EMPRESA.cuit,
-    direccion: data?.direccion ?? EMPRESA.direccion,
-    email: data?.email ?? EMPRESA.email,
-    telefono: data?.telefono ?? EMPRESA.telefono,
+    nombre: data.nombre?.trim() || EMPRESA.nombre,
+    cuit: data.cuit ?? "",
+    direccion: data.direccion ?? "",
+    email: data.email ?? "",
+    telefono: data.telefono ?? "",
   };
 }
