@@ -82,6 +82,15 @@ export const MEDIOS_PAGO: Record<MedioPago, string> = {
   otro: "Otro",
 };
 
+/** Origen del dinero de un egreso: de dónde salió la plata para pagarlo. */
+export const ORIGENES_FONDOS = {
+  banco: "Banco (Credicoop)",
+  efectivo: "Efectivo (caja chica)",
+  terceros: "Terceros",
+} as const;
+
+export type OrigenFondos = keyof typeof ORIGENES_FONDOS;
+
 
 export const CONDICIONES_FISCALES: Record<CondicionFiscal, string> = {
   responsable_inscripto: "Responsable Inscripto",

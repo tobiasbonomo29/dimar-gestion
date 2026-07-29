@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MEDIOS_PAGO, TIPOS_EGRESO, CATEGORIAS_EGRESO_SUGERIDAS } from "@/lib/constants";
+import { MEDIOS_PAGO, TIPOS_EGRESO, CATEGORIAS_EGRESO_SUGERIDAS, ORIGENES_FONDOS } from "@/lib/constants";
 import type { TipoEgreso } from "@/types/database";
 import { createEgreso } from "../actions";
 import { egresoDefaults, type EgresoFormValues } from "../schema";
@@ -54,6 +54,7 @@ export function EgresoFormDialog({ open, onOpenChange, tipo }: Props) {
   }, [open, tipo, reset]);
 
   const medioPago = watch("medio_pago");
+  const origen = watch("origen");
 
   async function onSubmit(values: EgresoFormValues) {
     const result = await createEgreso({ ...values, tipo });
@@ -121,23 +122,43 @@ export function EgresoFormDialog({ open, onOpenChange, tipo }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="medio_pago">Medio de pago</Label>
-            <Select
-              value={medioPago}
-              onValueChange={(v) => setValue("medio_pago", v as EgresoFormValues["medio_pago"])}
-            >
-              <SelectTrigger id="medio_pago">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(MEDIOS_PAGO).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="origen">Origen del dinero</Label>
+              <Select
+                value={origen}
+                onValueChange={(v) => setValue("origen", v as EgresoFormValues["origen"])}
+              >
+                <SelectTrigger id="origen">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ORIGENES_FONDOS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="medio_pago">Medio de pago</Label>
+              <Select
+                value={medioPago}
+                onValueChange={(v) => setValue("medio_pago", v as EgresoFormValues["medio_pago"])}
+              >
+                <SelectTrigger id="medio_pago">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MEDIOS_PAGO).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid gap-2">

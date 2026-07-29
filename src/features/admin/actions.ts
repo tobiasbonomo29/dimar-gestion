@@ -21,6 +21,7 @@ export async function createEgreso(values: EgresoFormValues): Promise<ActionResu
     categoria: e.categoria ?? null,
     monto: e.monto,
     medio_pago: e.medio_pago,
+    origen: e.origen,
     nota: e.nota ?? null,
     ...(e.fecha ? { fecha: e.fecha } : {}),
   });

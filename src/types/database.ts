@@ -191,6 +191,7 @@ export type Egreso = {
   categoria: string | null;
   monto: number;
   medio_pago: MedioPago;
+  origen: string | null;
   nota: string | null;
   created_at: string;
   updated_at: string;
@@ -281,7 +282,7 @@ export interface Database {
       };
       egresos: {
         Row: Row<Egreso>;
-        Insert: Insert<Egreso, "id" | "unidad_id" | "fecha" | "medio_pago" | "created_at" | "updated_at">;
+        Insert: Insert<Egreso, "id" | "unidad_id" | "fecha" | "medio_pago" | "origen" | "created_at" | "updated_at">;
         Update: Update<Egreso>;
         Relationships: [];
       };

@@ -15,9 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { MEDIOS_PAGO, TIPOS_EGRESO } from "@/lib/constants";
+import { MEDIOS_PAGO, TIPOS_EGRESO, ORIGENES_FONDOS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Egreso, TipoEgreso } from "@/types/database";
+
+type OrigenFiltro = keyof typeof ORIGENES_FONDOS | "todos";
 import { EgresoFormDialog } from "./egreso-form-dialog";
 import { deleteEgreso } from "../actions";
 
@@ -25,8 +28,14 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
   const router = useRouter();
   const [formOpen, setFormOpen] = React.useState(false);
   const [aBorrar, setABorrar] = React.useState<Egreso | null>(null);
+  const [origenFiltro, setOrigenFiltro] = React.useState<OrigenFiltro>("todos");
 
-  const total = egresos.reduce((a, e) => a + Number(e.monto), 0);
+  const filtrados = React.useMemo(
+    () => (origenFiltro === "todos" ? egresos : egresos.filter((e) => e.origen === origenFiltro)),
+    [egresos, origenFiltro],
+  );
+
+  const total = filtrados.reduce((a, e) => a + Number(e.monto), 0);
   const esCompra = tipo === "compra";
 
   async function handleDelete() {
@@ -53,6 +62,30 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
         </Button>
       </div>
 
+      {/* Filtro por origen del dinero */}
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          variant={origenFiltro === "todos" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOrigenFiltro("todos")}
+        >
+          Todos ({egresos.length})
+        </Button>
+        {(Object.keys(ORIGENES_FONDOS) as (keyof typeof ORIGENES_FONDOS)[]).map((o) => {
+          const count = egresos.filter((e) => e.origen === o).length;
+          return (
+            <Button
+              key={o}
+              variant={origenFiltro === o ? "default" : "outline"}
+              size="sm"
+              onClick={() => setOrigenFiltro(o)}
+            >
+              {ORIGENES_FONDOS[o]} ({count})
+            </Button>
+          );
+        })}
+      </div>
+
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -61,25 +94,44 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
               <TableHead>Concepto</TableHead>
               <TableHead>Categoría</TableHead>
               <TableHead>{esCompra ? "Proveedor" : "Destinatario"}</TableHead>
+              <TableHead>Origen</TableHead>
               <TableHead>Medio</TableHead>
               <TableHead className="text-right">Monto</TableHead>
               <TableHead className="w-[48px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {egresos.length === 0 ? (
+            {filtrados.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  Todavía no hay {esCompra ? "compras" : "erogaciones"}. Cargá la primera.
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  {egresos.length === 0
+                    ? `Todavía no hay ${esCompra ? "compras" : "erogaciones"}. Cargá la primera.`
+                    : "No hay registros con ese origen."}
                 </TableCell>
               </TableRow>
             ) : (
-              egresos.map((e) => (
+              filtrados.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="text-muted-foreground">{formatDate(e.fecha)}</TableCell>
                   <TableCell className="font-medium">{e.concepto}</TableCell>
                   <TableCell className="text-muted-foreground">{e.categoria ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.proveedor ?? "—"}</TableCell>
+                  <TableCell>
+                    {e.origen && e.origen in ORIGENES_FONDOS ? (
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full border px-2 py-0.5 text-xs",
+                          e.origen === "banco" && "border-blue-200 bg-blue-50 text-blue-700",
+                          e.origen === "efectivo" && "border-green-200 bg-green-50 text-green-700",
+                          e.origen === "terceros" && "border-amber-200 bg-amber-50 text-amber-700",
+                        )}
+                      >
+                        {ORIGENES_FONDOS[e.origen as keyof typeof ORIGENES_FONDOS]}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{MEDIOS_PAGO[e.medio_pago]}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
                     {formatCurrency(e.monto)}

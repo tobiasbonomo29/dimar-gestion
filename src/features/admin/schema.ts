@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const TIPOS = ["compra", "erogacion"] as const;
 const MEDIOS = ["efectivo", "transferencia", "cheque", "tarjeta", "otro"] as const;
+const ORIGENES = ["banco", "efectivo", "terceros"] as const;
 
 const optionalText = z
   .string()
@@ -21,6 +22,7 @@ export const egresoSchema = z.object({
   categoria: optionalText,
   monto: z.coerce.number().nonnegative("El monto no puede ser negativo"),
   medio_pago: z.enum(MEDIOS).default("transferencia"),
+  origen: z.enum(ORIGENES).default("banco"),
   nota: z
     .string()
     .trim()
@@ -40,6 +42,7 @@ export type EgresoFormValues = {
   categoria: string;
   monto: string;
   medio_pago: (typeof MEDIOS)[number];
+  origen: (typeof ORIGENES)[number];
   nota: string;
 };
 
@@ -52,6 +55,7 @@ export function egresoDefaults(tipo: (typeof TIPOS)[number]): EgresoFormValues {
     categoria: "",
     monto: "",
     medio_pago: "transferencia",
+    origen: "banco",
     nota: "",
   };
 }
