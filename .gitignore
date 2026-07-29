@@ -33,3 +33,8 @@ yarn-error.log*
 # supabase
 /supabase/.temp
 /supabase/.branches
+
+# Datos financieros / exports (no versionar)
+/*.csv
+/*.xls
+/*.xlsx
