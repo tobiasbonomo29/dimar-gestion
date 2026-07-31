@@ -48,6 +48,7 @@ export type Cliente = {
 export type Producto = {
   id: string;
   codigo: string | null;
+  codigo_barras: string | null;
   nombre: string;
   categoria: string;
   descripcion: string | null;
@@ -256,7 +257,7 @@ export interface Database {
       };
       productos: {
         Row: Row<Producto>;
-        Insert: Insert<Producto, "id" | "codigo" | "activo" | "unidad_medida" | "precio_base" | "stock" | "created_at" | "updated_at">;
+        Insert: Insert<Producto, "id" | "codigo" | "codigo_barras" | "activo" | "unidad_medida" | "precio_base" | "stock" | "created_at" | "updated_at">;
         Update: Update<Producto>;
         Relationships: [];
       };

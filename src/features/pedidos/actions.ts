@@ -193,3 +193,46 @@ export async function generarComprobante(
   revalidatePath(`/pedidos/${pedidoId}`);
   return { ok: true, data: { comprobante: comprobante as Comprobante } };
 }
+
+export type ItemEscaneado = {
+  tipo: "producto" | "medicamento";
+  producto_id: string | null;
+  descripcion: string;
+  precio: number;
+};
+
+/** Busca un producto o medicamento por su código de barras (unidad actual). */
+export async function buscarItemPorCodigoBarras(codigo: string): Promise<ItemEscaneado | null> {
+  const c = codigo.trim();
+  if (!c) return null;
+  const supabase = await createClient();
+
+  const { data: prod } = await supabase
+    .from("productos")
+    .select("id, nombre, precio_base")
+    .eq("codigo_barras", c)
+    .eq("activo", true)
+    .limit(1)
+    .maybeSingle();
+  if (prod) {
+    return { tipo: "producto", producto_id: prod.id, descripcion: prod.nombre, precio: Number(prod.precio_base) };
+  }
+
+  const { data: med } = await supabase
+    .from("medicamentos")
+    .select("descripcion, presentacion, precio")
+    .eq("codigo_barras", c)
+    .eq("activo", true)
+    .limit(1)
+    .maybeSingle();
+  if (med) {
+    return {
+      tipo: "medicamento",
+      producto_id: null,
+      descripcion: med.presentacion ? `${med.descripcion} · ${med.presentacion}` : med.descripcion,
+      precio: Number(med.precio),
+    };
+  }
+
+  return null;
+}

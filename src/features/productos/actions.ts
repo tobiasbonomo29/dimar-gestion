@@ -43,6 +43,7 @@ export async function createProducto(
     .from("productos")
     .insert({
       codigo: producto.codigo ?? null,
+      codigo_barras: producto.codigo_barras ?? null,
       nombre: producto.nombre,
       categoria: producto.categoria,
       descripcion: producto.descripcion ?? null,
@@ -93,6 +94,7 @@ export async function updateProducto(
     .from("productos")
     .update({
       codigo: producto.codigo ?? null,
+      codigo_barras: producto.codigo_barras ?? null,
       nombre: producto.nombre,
       categoria: producto.categoria,
       descripcion: producto.descripcion ?? null,

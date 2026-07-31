@@ -27,6 +27,7 @@ export const varianteSchema = z.object({
 
 export const productoSchema = z.object({
   codigo: optionalText,
+  codigo_barras: optionalText,
   nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200),
   categoria: z.string().trim().min(1, "Elegí o creá una categoría").max(60),
   descripcion: optionalText,
@@ -52,6 +53,7 @@ export type VarianteFormValues = {
 
 export type ProductoFormValues = {
   codigo?: string;
+  codigo_barras?: string;
   nombre: string;
   categoria: string;
   descripcion?: string;
@@ -72,6 +74,7 @@ export const varianteDefaults: VarianteFormValues = {
 
 export const productoDefaults: ProductoFormValues = {
   codigo: "",
+  codigo_barras: "",
   nombre: "",
   categoria: "",
   descripcion: "",

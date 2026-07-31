@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { BuscarMedicamento } from "./buscar-medicamento";
+import { EscanearCodigo } from "./escanear-codigo";
+import type { ItemEscaneado } from "../actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -123,7 +125,7 @@ export function PedidoForm({ clientes, catalogo }: Props) {
     defaultValues: { ...pedidoDefaults, items: [pedidoItemDefaults] },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const { fields, append, remove, update } = useFieldArray({ control, name: "items" });
 
   // Totales en vivo (contemplan el descuento antes del IVA).
   const watchedItems = useWatch({ control, name: "items" });
@@ -152,6 +154,33 @@ export function PedidoForm({ clientes, catalogo }: Props) {
     setValue(`items.${index}.variante_id`, entry.variante_id);
     setValue(`items.${index}.descripcion`, entry.descripcion);
     setValue(`items.${index}.precio_unitario`, String(entry.precio));
+  }
+
+  // Agrega un ítem escaneado o buscado. Si ya está en el pedido, suma cantidad.
+  function agregarItem(item: ItemEscaneado) {
+    const items = watchedItems ?? [];
+    const idx = items.findIndex((it) =>
+      item.producto_id ? it?.producto_id === item.producto_id : it?.descripcion === item.descripcion,
+    );
+    if (idx >= 0) {
+      const actual = items[idx];
+      const cant = Number(actual?.cantidad) || 0;
+      update(idx, {
+        producto_id: actual?.producto_id ?? null,
+        variante_id: actual?.variante_id ?? null,
+        descripcion: actual?.descripcion ?? item.descripcion,
+        cantidad: String(cant + 1),
+        precio_unitario: actual?.precio_unitario ?? String(item.precio),
+      });
+    } else {
+      append({
+        producto_id: item.producto_id,
+        variante_id: null,
+        descripcion: item.descripcion,
+        cantidad: "1",
+        precio_unitario: String(item.precio),
+      });
+    }
   }
 
   async function onSubmit(values: PedidoFormValues) {
@@ -261,21 +290,21 @@ export function PedidoForm({ clientes, catalogo }: Props) {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
+            <EscanearCodigo onScan={agregarItem} />
             <BuscarMedicamento
               onPick={(m) =>
-                append({
+                agregarItem({
+                  tipo: "medicamento",
                   producto_id: null,
-                  variante_id: null,
                   descripcion: m.presentacion ? `${m.descripcion} · ${m.presentacion}` : m.descripcion,
-                  cantidad: "1",
-                  precio_unitario: String(m.precio),
+                  precio: m.precio,
                 })
               }
             />
 
             {fields.length === 0 && (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                Agregá ítems del catálogo, buscá un medicamento arriba, o cargá uno libre.
+                Escaneá un código, buscá un medicamento, agregá del catálogo, o cargá uno libre.
               </p>
             )}
             {fields.map((field, index) => {

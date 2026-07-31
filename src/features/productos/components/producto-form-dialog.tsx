@@ -39,6 +39,7 @@ interface Props {
 function toFormValues(p: ProductoConVariantes): ProductoFormValues {
   return {
     codigo: p.codigo ?? "",
+    codigo_barras: p.codigo_barras ?? "",
     nombre: p.nombre,
     categoria: p.categoria,
     descripcion: p.descripcion ?? "",
@@ -109,6 +110,15 @@ export function ProductoFormDialog({ open, onOpenChange, producto, categorias }:
             <div className="grid gap-2">
               <Label htmlFor="nombre">Nombre *</Label>
               <Input id="nombre" autoFocus {...register("nombre")} />
+            </div>
+
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="codigo_barras">Código de barras</Label>
+              <Input
+                id="codigo_barras"
+                placeholder="Escaneá el código acá o escribilo (EAN/GTIN)"
+                {...register("codigo_barras")}
+              />
             </div>
 
             <div className="grid gap-2">
