@@ -32,6 +32,35 @@ export async function createEgreso(values: EgresoFormValues): Promise<ActionResu
   return { ok: true, data: undefined };
 }
 
+/** Edición de una compra o erogación existente. */
+export async function updateEgreso(id: string, values: EgresoFormValues): Promise<ActionResult> {
+  const parsed = egresoSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Datos inválidos" };
+  }
+  const e = parsed.data;
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("egresos")
+    .update({
+      tipo: e.tipo,
+      concepto: e.concepto,
+      proveedor: e.proveedor ?? null,
+      categoria: e.categoria ?? null,
+      monto: e.monto,
+      medio_pago: e.medio_pago,
+      origen: e.origen,
+      nota: e.nota ?? null,
+      ...(e.fecha ? { fecha: e.fecha } : {}),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/administracion");
+  return { ok: true, data: undefined };
+}
+
 export async function deleteEgreso(id: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("egresos").delete().eq("id", id);

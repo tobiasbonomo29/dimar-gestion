@@ -26,19 +26,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MEDIOS_PAGO, TIPOS_EGRESO, CATEGORIAS_EGRESO_SUGERIDAS, ORIGENES_FONDOS } from "@/lib/constants";
-import type { TipoEgreso } from "@/types/database";
-import { createEgreso } from "../actions";
+import type { Egreso, TipoEgreso } from "@/types/database";
+import { createEgreso, updateEgreso } from "../actions";
 import { egresoDefaults, type EgresoFormValues } from "../schema";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tipo: TipoEgreso;
+  /** Si viene un egreso, el formulario está en modo edición. */
+  egreso?: Egreso | null;
 }
 
-export function EgresoFormDialog({ open, onOpenChange, tipo }: Props) {
+function toFormValues(e: Egreso): EgresoFormValues {
+  const origen = e.origen === "efectivo" || e.origen === "terceros" ? e.origen : "banco";
+  return {
+    tipo: e.tipo,
+    fecha: e.fecha,
+    concepto: e.concepto,
+    proveedor: e.proveedor ?? "",
+    categoria: e.categoria ?? "",
+    monto: String(e.monto),
+    medio_pago: e.medio_pago,
+    origen,
+    nota: e.nota ?? "",
+  };
+}
+
+export function EgresoFormDialog({ open, onOpenChange, tipo, egreso }: Props) {
   const router = useRouter();
   const esCompra = tipo === "compra";
+  const isEdit = Boolean(egreso);
 
   const {
     register,
@@ -50,19 +68,22 @@ export function EgresoFormDialog({ open, onOpenChange, tipo }: Props) {
   } = useForm<EgresoFormValues>({ defaultValues: egresoDefaults(tipo) });
 
   React.useEffect(() => {
-    if (open) reset(egresoDefaults(tipo));
-  }, [open, tipo, reset]);
+    if (open) reset(egreso ? toFormValues(egreso) : egresoDefaults(tipo));
+  }, [open, tipo, egreso, reset]);
 
   const medioPago = watch("medio_pago");
   const origen = watch("origen");
 
   async function onSubmit(values: EgresoFormValues) {
-    const result = await createEgreso({ ...values, tipo });
+    const payload = { ...values, tipo };
+    const result = isEdit
+      ? await updateEgreso(egreso!.id, payload)
+      : await createEgreso(payload);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success(`${TIPOS_EGRESO[tipo]} registrada`);
+    toast.success(isEdit ? `${TIPOS_EGRESO[tipo]} actualizada` : `${TIPOS_EGRESO[tipo]} registrada`);
     onOpenChange(false);
     router.refresh();
   }
@@ -71,11 +92,13 @@ export function EgresoFormDialog({ open, onOpenChange, tipo }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Nueva {TIPOS_EGRESO[tipo].toLowerCase()}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Editar" : "Nueva"} {TIPOS_EGRESO[tipo].toLowerCase()}
+          </DialogTitle>
           <DialogDescription>
             {esCompra
-              ? "Registrá una compra de mercadería o insumos."
-              : "Registrá un gasto o erogación de la unidad."}
+              ? "Compra de mercadería o insumos."
+              : "Gasto o erogación de la unidad."}
           </DialogDescription>
         </DialogHeader>
 

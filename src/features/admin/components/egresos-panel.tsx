@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ import { deleteEgreso } from "../actions";
 export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoEgreso }) {
   const router = useRouter();
   const [formOpen, setFormOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Egreso | null>(null);
   const [aBorrar, setABorrar] = React.useState<Egreso | null>(null);
   const [origenFiltro, setOrigenFiltro] = React.useState<OrigenFiltro>("todos");
 
@@ -56,7 +57,13 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
           {egresos.length} {egresos.length === 1 ? "registro" : "registros"} · Total{" "}
           <span className="font-medium tabular-nums text-foreground">{formatCurrency(total)}</span>
         </p>
-        <Button size="sm" onClick={() => setFormOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" />
           Nueva {esCompra ? "compra" : "erogación"}
         </Button>
@@ -97,7 +104,7 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
               <TableHead>Origen</TableHead>
               <TableHead>Medio</TableHead>
               <TableHead className="text-right">Monto</TableHead>
-              <TableHead className="w-[48px]" />
+              <TableHead className="w-[90px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,15 +144,29 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
                     {formatCurrency(e.monto)}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => setABorrar(e)}
-                      aria-label="Eliminar"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setEditing(e);
+                          setFormOpen(true);
+                        }}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setABorrar(e)}
+                        aria-label="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -154,7 +175,15 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
         </Table>
       </div>
 
-      <EgresoFormDialog open={formOpen} onOpenChange={setFormOpen} tipo={tipo} />
+      <EgresoFormDialog
+        open={formOpen}
+        onOpenChange={(o) => {
+          setFormOpen(o);
+          if (!o) setEditing(null);
+        }}
+        tipo={tipo}
+        egreso={editing}
+      />
       <ConfirmDialog
         open={aBorrar !== null}
         onOpenChange={(open) => !open && setABorrar(null)}
