@@ -1,4 +1,10 @@
-import { getEgresos, getEstadoResultados } from "@/features/admin/queries";
+import {
+  getEgresos,
+  getEstadoResultados,
+  getFacturacion,
+  getFacturasImpagas,
+  getAportes,
+} from "@/features/admin/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +25,13 @@ export default async function AdministracionPage({
   const desde = qd ?? iso(new Date(now.getFullYear(), 0, 1));
   const hasta = qh ?? iso(now);
 
-  const [estado, compras, erogaciones] = await Promise.all([
+  const [estado, compras, erogaciones, facturacion, impagas, aportesData] = await Promise.all([
     getEstadoResultados(desde, hasta),
     getEgresos("compra"),
     getEgresos("erogacion"),
+    getFacturacion(desde, hasta),
+    getFacturasImpagas(),
+    getAportes(desde, hasta),
   ]);
 
   return (
@@ -34,7 +43,15 @@ export default async function AdministracionPage({
         </p>
       </div>
 
-      <AdminView estado={estado} compras={compras} erogaciones={erogaciones} />
+      <AdminView
+        estado={estado}
+        compras={compras}
+        erogaciones={erogaciones}
+        facturacion={facturacion}
+        impagas={impagas}
+        aportes={aportesData.aportes}
+        aportesTotal={aportesData.total}
+      />
     </div>
   );
 }

@@ -46,6 +46,38 @@ export type EgresoFormValues = {
   nota: string;
 };
 
+// --- Aportes de capital ---
+const ORIGENES_APORTE = ["banco", "efectivo", "terceros"] as const;
+
+export const aporteSchema = z.object({
+  aportante: z.string().trim().min(1, "Ingresá quién hizo el aporte").max(150),
+  monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
+  fecha: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
+  origen: z.enum(ORIGENES_APORTE).default("banco"),
+  nota: optionalText,
+});
+
+export type AporteFormValues = {
+  aportante: string;
+  monto: string;
+  fecha: string;
+  origen: (typeof ORIGENES_APORTE)[number];
+  nota: string;
+};
+
+export function aporteDefaults(): AporteFormValues {
+  return {
+    aportante: "",
+    monto: "",
+    fecha: new Date().toISOString().slice(0, 10),
+    origen: "banco",
+    nota: "",
+  };
+}
+
 export function egresoDefaults(tipo: (typeof TIPOS)[number]): EgresoFormValues {
   return {
     tipo,

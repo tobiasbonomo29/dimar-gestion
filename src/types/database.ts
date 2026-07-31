@@ -119,6 +119,17 @@ export type PuntoVenta = {
   created_at: string;
 }
 
+export type AporteCapital = {
+  id: string;
+  unidad_id: string;
+  fecha: string;
+  aportante: string;
+  monto: number;
+  origen: string | null;
+  nota: string | null;
+  created_at: string;
+}
+
 export type PedidoItem = {
   id: string;
   pedido_id: string;
@@ -276,6 +287,12 @@ export interface Database {
         Row: Row<PuntoVenta>;
         Insert: Insert<PuntoVenta, "id" | "unidad_id" | "activo" | "created_at">;
         Update: Update<PuntoVenta>;
+        Relationships: [];
+      };
+      aportes_capital: {
+        Row: Row<AporteCapital>;
+        Insert: Insert<AporteCapital, "id" | "unidad_id" | "fecha" | "created_at">;
+        Update: Update<AporteCapital>;
         Relationships: [];
       };
       pagos: {

@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
-import type { Egreso, TipoEgreso } from "@/types/database";
+import type { Egreso, TipoEgreso, AporteCapital } from "@/types/database";
+
+function hastaExclusivo(hasta: string): string {
+  const d = new Date(hasta + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 /** Lista de egresos (compras/erogaciones), opcionalmente filtrada por tipo. */
 export async function getEgresos(tipo?: TipoEgreso): Promise<Egreso[]> {
@@ -154,4 +160,152 @@ export async function getEstadoResultados(
       .map(([categoria, monto]) => ({ categoria, monto }))
       .sort((a, b) => b.monto - a.monto),
   };
+}
+
+// -----------------------------------------------------------------------------
+// Facturación (drill-down por cliente y por producto)
+// -----------------------------------------------------------------------------
+export type FacturacionCliente = {
+  cliente_id: string;
+  razon_social: string;
+  monto: number;
+  cantidad: number;
+};
+export type FacturacionProducto = { descripcion: string; cantidad: number; monto: number };
+export type Facturacion = {
+  total: number;
+  cantFacturas: number;
+  porCliente: FacturacionCliente[];
+  porProducto: FacturacionProducto[];
+};
+
+type PedFact = { id: string; total: number; cliente_id: string; clientes: { razon_social: string } | null };
+
+/** Total facturado del período + desglose por cliente y por producto. */
+export async function getFacturacion(desde: string, hasta: string): Promise<Facturacion> {
+  const supabase = await createClient();
+  const { data: peds, error } = await supabase
+    .from("pedidos")
+    .select("id, total, cliente_id, clientes(razon_social)")
+    .in("estado", ESTADOS_GENERAN_DEUDA)
+    .gte("fecha_creacion", desde)
+    .lt("fecha_creacion", hastaExclusivo(hasta))
+    .returns<PedFact[]>();
+  if (error) throw new Error(error.message);
+
+  const ids = (peds ?? []).map((p) => p.id);
+  let items: { descripcion: string; cantidad: number; subtotal: number }[] = [];
+  if (ids.length > 0) {
+    const { data, error: e2 } = await supabase
+      .from("pedido_items")
+      .select("descripcion, cantidad, subtotal")
+      .in("pedido_id", ids);
+    if (e2) throw new Error(e2.message);
+    items = data ?? [];
+  }
+
+  let total = 0;
+  const porCliente = new Map<string, FacturacionCliente>();
+  for (const p of peds ?? []) {
+    total += Number(p.total);
+    const cur =
+      porCliente.get(p.cliente_id) ??
+      { cliente_id: p.cliente_id, razon_social: p.clientes?.razon_social ?? "—", monto: 0, cantidad: 0 };
+    cur.monto += Number(p.total);
+    cur.cantidad += 1;
+    porCliente.set(p.cliente_id, cur);
+  }
+
+  const porProducto = new Map<string, FacturacionProducto>();
+  for (const it of items) {
+    const cur = porProducto.get(it.descripcion) ?? { descripcion: it.descripcion, cantidad: 0, monto: 0 };
+    cur.cantidad += Number(it.cantidad);
+    cur.monto += Number(it.subtotal);
+    porProducto.set(it.descripcion, cur);
+  }
+
+  return {
+    total,
+    cantFacturas: peds?.length ?? 0,
+    porCliente: [...porCliente.values()].sort((a, b) => b.monto - a.monto),
+    porProducto: [...porProducto.values()].sort((a, b) => b.monto - a.monto),
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Facturas impagas (pendientes de cobro)
+// -----------------------------------------------------------------------------
+export type FacturaImpaga = {
+  id: string;
+  numero: number;
+  razon_social: string;
+  fecha: string;
+  total: number;
+  pagado: number;
+  saldo: number;
+};
+
+type PedCobro = { id: string; numero: number; total: number; fecha_creacion: string; clientes: { razon_social: string } | null };
+
+/** Pedidos facturados cuyo pago registrado (asociado al pedido) es menor al total. */
+export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
+  const supabase = await createClient();
+  const { data: peds, error } = await supabase
+    .from("pedidos")
+    .select("id, numero, total, fecha_creacion, clientes(razon_social)")
+    .in("estado", ESTADOS_GENERAN_DEUDA)
+    .order("fecha_creacion", { ascending: false })
+    .returns<PedCobro[]>();
+  if (error) throw new Error(error.message);
+
+  const ids = (peds ?? []).map((p) => p.id);
+  const pagadoPorPed = new Map<string, number>();
+  if (ids.length > 0) {
+    const { data: pagos, error: e2 } = await supabase
+      .from("pagos")
+      .select("pedido_id, monto")
+      .in("pedido_id", ids);
+    if (e2) throw new Error(e2.message);
+    for (const pg of pagos ?? []) {
+      if (!pg.pedido_id) continue;
+      pagadoPorPed.set(pg.pedido_id, (pagadoPorPed.get(pg.pedido_id) ?? 0) + Number(pg.monto));
+    }
+  }
+
+  const res: FacturaImpaga[] = [];
+  for (const p of peds ?? []) {
+    const pagado = pagadoPorPed.get(p.id) ?? 0;
+    const saldo = Number(p.total) - pagado;
+    if (saldo > 0.01) {
+      res.push({
+        id: p.id,
+        numero: p.numero,
+        razon_social: p.clientes?.razon_social ?? "—",
+        fecha: p.fecha_creacion,
+        total: Number(p.total),
+        pagado,
+        saldo,
+      });
+    }
+  }
+  return res.sort((a, b) => b.saldo - a.saldo);
+}
+
+// -----------------------------------------------------------------------------
+// Aportes de capital
+// -----------------------------------------------------------------------------
+export async function getAportes(
+  desde: string,
+  hasta: string,
+): Promise<{ aportes: AporteCapital[]; total: number }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("aportes_capital")
+    .select("*")
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    .order("fecha", { ascending: false });
+  if (error) throw new Error(error.message);
+  const aportes = data ?? [];
+  return { aportes, total: aportes.reduce((a, x) => a + Number(x.monto), 0) };
 }
