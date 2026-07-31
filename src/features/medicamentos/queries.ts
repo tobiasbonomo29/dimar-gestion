@@ -31,3 +31,15 @@ export async function getMedicamentosCount(): Promise<number> {
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
+
+import type { AlfabetaEstado } from "@/types/database";
+
+/** Estado de sincronización con Alfabeta de la unidad actual. */
+export async function getAlfabetaEstado(): Promise<Pick<AlfabetaEstado, "ultima_sync" | "ultimolog"> | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("alfabeta_estado")
+    .select("ultima_sync, ultimolog")
+    .maybeSingle();
+  return data ?? null;
+}

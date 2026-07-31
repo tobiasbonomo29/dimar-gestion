@@ -130,6 +130,13 @@ export type AporteCapital = {
   created_at: string;
 }
 
+export type AlfabetaEstado = {
+  unidad_id: string;
+  ultimolog: number | null;
+  ultima_sync: string | null;
+  updated_at: string;
+}
+
 export type PedidoItem = {
   id: string;
   pedido_id: string;
@@ -293,6 +300,12 @@ export interface Database {
         Row: Row<AporteCapital>;
         Insert: Insert<AporteCapital, "id" | "unidad_id" | "fecha" | "created_at">;
         Update: Update<AporteCapital>;
+        Relationships: [];
+      };
+      alfabeta_estado: {
+        Row: Row<AlfabetaEstado>;
+        Insert: Insert<AlfabetaEstado, "unidad_id" | "updated_at">;
+        Update: Update<AlfabetaEstado>;
         Relationships: [];
       };
       pagos: {

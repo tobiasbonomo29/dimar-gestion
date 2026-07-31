@@ -1,4 +1,8 @@
-import { getMedicamentos, getMedicamentosCount } from "@/features/medicamentos/queries";
+import {
+  getMedicamentos,
+  getMedicamentosCount,
+  getAlfabetaEstado,
+} from "@/features/medicamentos/queries";
 import { MedicamentosView } from "@/features/medicamentos/components/medicamentos-view";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +13,10 @@ export default async function MedicamentosPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const [medicamentos, total] = await Promise.all([
+  const [medicamentos, total, alfabeta] = await Promise.all([
     getMedicamentos(q),
     getMedicamentosCount(),
+    getAlfabetaEstado(),
   ]);
 
   return (
@@ -23,7 +28,7 @@ export default async function MedicamentosPage({
         </p>
       </div>
 
-      <MedicamentosView medicamentos={medicamentos} total={total} q={q ?? ""} />
+      <MedicamentosView medicamentos={medicamentos} total={total} q={q ?? ""} alfabeta={alfabeta} />
     </div>
   );
 }

@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/clientes/actions";
+import {
+  getAuxMap,
+  getBaseCompleta,
+  getNovedades,
+  type AlfabetaArticulo,
+} from "./alfabeta";
 
 /** Una fila de medicamento a importar (ya parseada y mapeada en el cliente). */
 export type MedicamentoImportRow = {
@@ -83,4 +89,138 @@ export async function vaciarMedicamentos(): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
   revalidatePath("/medicamentos");
   return { ok: true, data: undefined };
+}
+
+// =============================================================================
+// Sincronización con la API de Alfabeta
+// =============================================================================
+
+function articuloToRow(
+  a: AlfabetaArticulo,
+  labs: Map<number, string>,
+  drogas: Map<number, string>,
+): MedicamentoImportRow {
+  return {
+    nro_registro: String(a.id ?? "").trim(),
+    descripcion: (a.nombre ?? "").trim(),
+    precio: Number(a.precio) || 0,
+    droga: a.droga ? drogas.get(a.droga) ?? null : null,
+    laboratorio: a.laboratorio ? labs.get(a.laboratorio) ?? null : null,
+    presentacion: a.presentacion?.trim() || null,
+    codigo_barras: a.codigoDeBarras?.[0] ?? null,
+    troquel: a.troquel?.trim() || null,
+  };
+}
+
+async function guardarEstadoAlfabeta(ultimolog: number): Promise<void> {
+  const supabase = await createClient();
+  const { data: unidad } = await supabase.from("unidades").select("id").maybeSingle();
+  if (!unidad) return;
+  await supabase
+    .from("alfabeta_estado")
+    .upsert(
+      { unidad_id: unidad.id, ultimolog, ultima_sync: new Date().toISOString() },
+      { onConflict: "unidad_id" },
+    );
+}
+
+/**
+ * Carga (o recarga) TODO el catálogo desde la base completa de Alfabeta.
+ * test=true trae pocos registros (para probar sin bajar toda la base).
+ * Guarda el ultimolog para poder traer novedades después.
+ */
+export async function sincronizarBaseAlfabeta(
+  test: boolean,
+): Promise<ActionResult<{ importados: number; ultimolog: number }>> {
+  try {
+    const [labs, drogas] = await Promise.all([getAuxMap("laboratorios"), getAuxMap("drogas")]);
+    const base = await getBaseCompleta(test);
+    const rows = base.articulos
+      .map((a) => articuloToRow(a, labs, drogas))
+      .filter((r) => r.nro_registro && r.descripcion);
+
+    if (rows.length === 0) {
+      return { ok: false, error: "Alfabeta no devolvió artículos." };
+    }
+    const res = await importarMedicamentos(rows);
+    if (!res.ok) return res;
+
+    await guardarEstadoAlfabeta(base.ultimolog);
+    revalidatePath("/medicamentos");
+    return { ok: true, data: { importados: res.data.importados, ultimolog: base.ultimolog } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error al sincronizar con Alfabeta" };
+  }
+}
+
+/**
+ * Trae solo las novedades desde el último log y las aplica:
+ *  - P: cambio de precio · B: baja (inactiva) · A/M/R: alta/modificación (upsert).
+ * Actualiza el ultimolog. Ideal para correr 1–2 veces por día.
+ */
+export async function traerNovedadesAlfabeta(): Promise<
+  ActionResult<{ cambios: number; ultimolog: number }>
+> {
+  try {
+    const supabase = await createClient();
+    const { data: unidad } = await supabase.from("unidades").select("id").maybeSingle();
+    if (!unidad) return { ok: false, error: "No se pudo determinar la unidad." };
+
+    const { data: estado } = await supabase
+      .from("alfabeta_estado")
+      .select("ultimolog")
+      .eq("unidad_id", unidad.id)
+      .maybeSingle();
+    if (!estado?.ultimolog) {
+      return { ok: false, error: "Primero cargá la base completa (así queda el punto de partida)." };
+    }
+
+    const nov = await getNovedades(estado.ultimolog);
+    if (nov.sinNovedades || nov.datos.length === 0) {
+      await guardarEstadoAlfabeta(nov.ultimolog);
+      return { ok: true, data: { cambios: 0, ultimolog: nov.ultimolog } };
+    }
+
+    // Aux maps solo si hay altas/modificaciones que traen el artículo completo.
+    const necesitaAux = nov.datos.some((d) => ["A", "M", "R"].includes(d.operacion));
+    const labs = necesitaAux ? await getAuxMap("laboratorios") : new Map<number, string>();
+    const drogas = necesitaAux ? await getAuxMap("drogas") : new Map<number, string>();
+
+    const ahora = new Date().toISOString();
+    const upserts: MedicamentoImportRow[] = [];
+    let cambios = 0;
+
+    for (const d of nov.datos) {
+      if (d.operacion === "P" && d.registro != null) {
+        await supabase
+          .from("medicamentos")
+          .update({ precio: Number(d.precio) || 0, actualizado_en: ahora })
+          .eq("unidad_id", unidad.id)
+          .eq("nro_registro", String(d.registro));
+        cambios++;
+      } else if (d.operacion === "B" && d.registro != null) {
+        await supabase
+          .from("medicamentos")
+          .update({ activo: false, actualizado_en: ahora })
+          .eq("unidad_id", unidad.id)
+          .eq("nro_registro", String(d.registro));
+        cambios++;
+      } else if (["A", "M", "R"].includes(d.operacion) && d.articulo) {
+        upserts.push(articuloToRow(d.articulo, labs, drogas));
+      }
+      // T/C/D (cambios en tablas auxiliares) se ignoran: se reflejan en la próxima base completa.
+    }
+
+    if (upserts.length > 0) {
+      const res = await importarMedicamentos(upserts.filter((r) => r.nro_registro && r.descripcion));
+      if (!res.ok) return res;
+      cambios += upserts.length;
+    }
+
+    await guardarEstadoAlfabeta(nov.ultimolog);
+    revalidatePath("/medicamentos");
+    return { ok: true, data: { cambios, ultimolog: nov.ultimolog } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error al traer novedades de Alfabeta" };
+  }
 }

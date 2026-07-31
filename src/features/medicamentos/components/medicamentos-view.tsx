@@ -17,18 +17,21 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatCurrency, formatDate } from "@/lib/format";
-import type { Medicamento } from "@/types/database";
+import type { AlfabetaEstado, Medicamento } from "@/types/database";
 import { ImportarDialog } from "./importar-dialog";
+import { SincronizarAlfabeta } from "./sincronizar-alfabeta";
 import { vaciarMedicamentos } from "../actions";
 
 export function MedicamentosView({
   medicamentos,
   total,
   q,
+  alfabeta,
 }: {
   medicamentos: Medicamento[];
   total: number;
   q: string;
+  alfabeta: Pick<AlfabetaEstado, "ultima_sync" | "ultimolog"> | null;
 }) {
   const router = useRouter();
   const [busqueda, setBusqueda] = React.useState(q);
@@ -52,6 +55,11 @@ export function MedicamentosView({
 
   return (
     <div className="space-y-4">
+      <SincronizarAlfabeta
+        ultimaSync={alfabeta?.ultima_sync ?? null}
+        ultimolog={alfabeta?.ultimolog ?? null}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <form onSubmit={onSearch} className="flex flex-1 gap-2">
           <div className="relative max-w-sm flex-1">
