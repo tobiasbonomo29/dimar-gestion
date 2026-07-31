@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Package, ClipboardList, Truck, BarChart3, Pill } from "lucide-react";
+import { LayoutDashboard, Users, Package, ClipboardList, Truck, BarChart3, Pill, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/productos", label: "Productos", icon: Package },
   { href: "/medicamentos", label: "Medicamentos", icon: Pill },
   { href: "/administracion", label: "Administración", icon: BarChart3 },
+  { href: "/puntos-venta", label: "Puntos de venta", icon: Store },
 ];
 
 export function SidebarNav() {

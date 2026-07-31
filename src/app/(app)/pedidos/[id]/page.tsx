@@ -16,6 +16,7 @@ import { CambiarEstado } from "@/features/pedidos/components/cambiar-estado";
 import { DescargarCotizacion } from "@/features/pedidos/components/descargar-cotizacion";
 import { ComprobantesPanel } from "@/features/pedidos/components/comprobantes-panel";
 import { getPedido } from "@/features/pedidos/queries";
+import { getPuntosVenta } from "@/features/puntos-venta/queries";
 import { CONDICIONES_FISCALES, ORIGENES_PEDIDO } from "@/lib/constants";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
@@ -27,7 +28,7 @@ export default async function PedidoDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const pedido = await getPedido(id);
+  const [pedido, puntosVenta] = await Promise.all([getPedido(id), getPuntosVenta(true)]);
   if (!pedido) notFound();
 
   const cliente = pedido.clientes;
@@ -141,7 +142,7 @@ export default async function PedidoDetallePage({
               <CardTitle className="text-base">Comprobantes</CardTitle>
             </CardHeader>
             <CardContent>
-              <ComprobantesPanel pedido={pedido} />
+              <ComprobantesPanel pedido={pedido} puntosVenta={puntosVenta} />
             </CardContent>
           </Card>
 

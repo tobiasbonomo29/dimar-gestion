@@ -132,8 +132,10 @@ export async function cambiarEstadoPedido(
 export async function generarComprobante(
   pedidoId: string,
   tipo: TipoComprobante,
+  puntoVentaId: string,
   avanzarEstado = false,
 ): Promise<ActionResult<{ comprobante: Comprobante }>> {
+  if (!puntoVentaId) return { ok: false, error: "Elegí un punto de venta." };
   const supabase = await createClient();
 
   const { data: pedido, error: pedErr } = await supabase
@@ -147,11 +149,12 @@ export async function generarComprobante(
     return { ok: false, error: "No se puede generar un comprobante de un pedido cancelado." };
   }
 
-  // Número correlativo por tipo.
+  // Número correlativo por (punto de venta, tipo).
   const { data: ultimo, error: numErr } = await supabase
     .from("comprobantes")
     .select("numero")
     .eq("tipo", tipo)
+    .eq("punto_venta_id", puntoVentaId)
     .order("numero", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -160,7 +163,7 @@ export async function generarComprobante(
 
   const { data: comprobante, error: insErr } = await supabase
     .from("comprobantes")
-    .insert({ pedido_id: pedidoId, tipo, numero, total: pedido.total })
+    .insert({ pedido_id: pedidoId, punto_venta_id: puntoVentaId, tipo, numero, total: pedido.total })
     .select("*")
     .single();
   if (insErr) return { ok: false, error: insErr.message };

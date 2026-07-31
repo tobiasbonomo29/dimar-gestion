@@ -16,11 +16,15 @@ export type PedidoConCliente = Pedido & {
   > | null;
 };
 
+export type ComprobanteConPV = Comprobante & {
+  puntos_venta: { numero: number; nombre: string | null } | null;
+};
+
 export type PedidoDetalle = Pedido & {
   clientes: Cliente | null;
   pedido_items: PedidoItem[];
   historial_estado: HistorialEstado[];
-  comprobantes: Comprobante[];
+  comprobantes: ComprobanteConPV[];
 };
 
 /** Lista de pedidos con datos básicos del cliente, filtrable por estado. */
@@ -85,7 +89,7 @@ export async function getPedido(id: string): Promise<PedidoDetalle | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, clientes(*), pedido_items(*), historial_estado(*), comprobantes(*)")
+    .select("*, clientes(*), pedido_items(*), historial_estado(*), comprobantes(*, puntos_venta(numero, nombre))")
     .eq("id", id)
     .order("created_at", { referencedTable: "pedido_items", ascending: true })
     .order("fecha", { referencedTable: "historial_estado", ascending: false })

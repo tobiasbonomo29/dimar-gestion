@@ -48,6 +48,11 @@ export function formatDate(value: string | Date | null | undefined): string {
   return dateFormatter.format(d);
 }
 
+/** Formatea el número de comprobante estilo AFIP: 0001-00000001 (PV-número). */
+export function formatComprobanteNumero(puntoVenta: number, numero: number): string {
+  return `${String(puntoVenta).padStart(4, "0")}-${String(numero).padStart(8, "0")}`;
+}
+
 /** Formatea fecha y hora: 01/07/2026 14:30 */
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return "—";

@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatComprobanteNumero } from "@/lib/format";
 import type { Comprobante, TipoComprobante } from "@/types/database";
 import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle } from "../queries";
@@ -60,16 +60,19 @@ export function ComprobantePDF({
   pedido,
   comprobante,
   empresa,
+  puntoVentaNumero,
 }: {
   pedido: PedidoDetalle;
   comprobante: Comprobante;
   empresa: Empresa;
+  puntoVentaNumero: number;
 }) {
   const cliente = pedido.clientes;
   const esFactura = comprobante.tipo === "factura";
+  const nroComprobante = formatComprobanteNumero(puntoVentaNumero, comprobante.numero);
 
   return (
-    <Document title={`${TITULOS[comprobante.tipo]} N°${comprobante.numero} - ${empresa.nombre}`} author={empresa.nombre}>
+    <Document title={`${TITULOS[comprobante.tipo]} ${nroComprobante} - ${empresa.nombre}`} author={empresa.nombre}>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
@@ -84,7 +87,7 @@ export function ComprobantePDF({
           </View>
           <View style={styles.docTitleBox}>
             <Text style={styles.docTitle}>{TITULOS[comprobante.tipo]}</Text>
-            <Text style={styles.docMeta}>N° {String(comprobante.numero).padStart(4, "0")}</Text>
+            <Text style={styles.docMeta}>N° {nroComprobante}</Text>
             <Text style={styles.docMeta}>Fecha: {formatDate(comprobante.fecha)}</Text>
             <Text style={styles.docMeta}>Pedido #{pedido.numero}</Text>
           </View>

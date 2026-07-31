@@ -102,10 +102,20 @@ export type Pedido = {
 export type Comprobante = {
   id: string;
   pedido_id: string;
+  punto_venta_id: string;
   tipo: TipoComprobante;
   numero: number;
   fecha: string;
   total: number;
+  created_at: string;
+}
+
+export type PuntoVenta = {
+  id: string;
+  unidad_id: string;
+  numero: number;
+  nombre: string | null;
+  activo: boolean;
   created_at: string;
 }
 
@@ -260,6 +270,12 @@ export interface Database {
         Row: Row<Comprobante>;
         Insert: Insert<Comprobante, "id" | "fecha" | "total" | "created_at">;
         Update: Update<Comprobante>;
+        Relationships: [];
+      };
+      puntos_venta: {
+        Row: Row<PuntoVenta>;
+        Insert: Insert<PuntoVenta, "id" | "unidad_id" | "activo" | "created_at">;
+        Update: Update<PuntoVenta>;
         Relationships: [];
       };
       pagos: {
