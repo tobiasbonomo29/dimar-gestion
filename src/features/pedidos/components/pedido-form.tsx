@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { BuscarMedicamento } from "./buscar-medicamento";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -260,9 +261,21 @@ export function PedidoForm({ clientes, catalogo }: Props) {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
+            <BuscarMedicamento
+              onPick={(m) =>
+                append({
+                  producto_id: null,
+                  variante_id: null,
+                  descripcion: m.presentacion ? `${m.descripcion} · ${m.presentacion}` : m.descripcion,
+                  cantidad: "1",
+                  precio_unitario: String(m.precio),
+                })
+              }
+            />
+
             {fields.length === 0 && (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                Agregá al menos un ítem al pedido.
+                Agregá ítems del catálogo, buscá un medicamento arriba, o cargá uno libre.
               </p>
             )}
             {fields.map((field, index) => {

@@ -224,3 +224,24 @@ export async function traerNovedadesAlfabeta(): Promise<
     return { ok: false, error: e instanceof Error ? e.message : "Error al traer novedades de Alfabeta" };
   }
 }
+
+/** Busca medicamentos activos (para agregarlos como ítems de un pedido). */
+export async function buscarMedicamentos(q: string): Promise<
+  { nro_registro: string; descripcion: string; presentacion: string | null; precio: number }[]
+> {
+  const term = q.trim();
+  if (term.length < 2) return [];
+  const supabase = await createClient();
+  const like = `%${term.replace(/[%,]/g, "")}%`;
+  const { data, error } = await supabase
+    .from("medicamentos")
+    .select("nro_registro, descripcion, presentacion, precio")
+    .eq("activo", true)
+    .or(
+      `descripcion.ilike.${like},droga.ilike.${like},laboratorio.ilike.${like},nro_registro.ilike.${like}`,
+    )
+    .order("descripcion", { ascending: true })
+    .limit(20);
+  if (error) return [];
+  return data ?? [];
+}
