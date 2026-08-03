@@ -67,7 +67,7 @@ export function AdminView({
         </TabsContent>
 
         <TabsContent value="facturacion">
-          <FacturacionPanel facturacion={facturacion} />
+          <FacturacionPanel facturacion={facturacion} desde={estado.desde} hasta={estado.hasta} />
         </TabsContent>
 
         <TabsContent value="cobrar">

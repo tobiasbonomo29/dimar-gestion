@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Users, Package, TrendingUp } from "lucide-react";
+import { Users, Package, TrendingUp, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,11 +14,63 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { exportSheetsToExcel } from "@/lib/export-excel";
 import type { Facturacion } from "../queries";
 
-export function FacturacionPanel({ facturacion }: { facturacion: Facturacion }) {
+export function FacturacionPanel({
+  facturacion,
+  desde,
+  hasta,
+}: {
+  facturacion: Facturacion;
+  desde: string;
+  hasta: string;
+}) {
+  function descargarExcel() {
+    exportSheetsToExcel(
+      [
+        {
+          name: "Resumen",
+          rows: [
+            { Concepto: "Período", Valor: `${desde} a ${hasta}` },
+            { Concepto: "Total facturado", Valor: facturacion.total },
+            { Concepto: "Cantidad de facturas", Valor: facturacion.cantFacturas },
+            { Concepto: "Clientes", Valor: facturacion.porCliente.length },
+          ],
+        },
+        {
+          name: "Por cliente",
+          rows: facturacion.porCliente.map((c) => ({
+            Cliente: c.razon_social,
+            Facturas: c.cantidad,
+            Facturado: c.monto,
+          })),
+        },
+        {
+          name: "Por producto",
+          rows: facturacion.porProducto.map((p) => ({
+            Producto: p.descripcion,
+            Cantidad: p.cantidad,
+            Facturado: p.monto,
+          })),
+        },
+      ],
+      `facturacion-${desde}_${hasta}`,
+    );
+  }
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Facturado del período {desde} a {hasta}.
+        </p>
+        <Button variant="outline" size="sm" onClick={descargarExcel}>
+          <FileSpreadsheet className="h-4 w-4" />
+          Descargar Excel
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4">
