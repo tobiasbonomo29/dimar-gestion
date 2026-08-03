@@ -168,6 +168,7 @@ export async function getEstadoResultados(
 export type FacturacionCliente = {
   cliente_id: string;
   razon_social: string;
+  cuit: string | null;
   monto: number;
   cantidad: number;
 };
@@ -179,14 +180,19 @@ export type Facturacion = {
   porProducto: FacturacionProducto[];
 };
 
-type PedFact = { id: string; total: number; cliente_id: string; clientes: { razon_social: string } | null };
+type PedFact = {
+  id: string;
+  total: number;
+  cliente_id: string;
+  clientes: { razon_social: string; cuit: string | null } | null;
+};
 
 /** Total facturado del período + desglose por cliente y por producto. */
 export async function getFacturacion(desde: string, hasta: string): Promise<Facturacion> {
   const supabase = await createClient();
   const { data: peds, error } = await supabase
     .from("pedidos")
-    .select("id, total, cliente_id, clientes(razon_social)")
+    .select("id, total, cliente_id, clientes(razon_social, cuit)")
     .in("estado", ESTADOS_GENERAN_DEUDA)
     .gte("fecha_creacion", desde)
     .lt("fecha_creacion", hastaExclusivo(hasta))
@@ -210,7 +216,13 @@ export async function getFacturacion(desde: string, hasta: string): Promise<Fact
     total += Number(p.total);
     const cur =
       porCliente.get(p.cliente_id) ??
-      { cliente_id: p.cliente_id, razon_social: p.clientes?.razon_social ?? "—", monto: 0, cantidad: 0 };
+      {
+        cliente_id: p.cliente_id,
+        razon_social: p.clientes?.razon_social ?? "—",
+        cuit: p.clientes?.cuit ?? null,
+        monto: 0,
+        cantidad: 0,
+      };
     cur.monto += Number(p.total);
     cur.cantidad += 1;
     porCliente.set(p.cliente_id, cur);

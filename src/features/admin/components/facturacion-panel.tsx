@@ -42,6 +42,7 @@ export function FacturacionPanel({
           name: "Por cliente",
           rows: facturacion.porCliente.map((c) => ({
             Cliente: c.razon_social,
+            CUIT: c.cuit ?? "",
             Facturas: c.cantidad,
             Facturado: c.monto,
           })),
@@ -120,6 +121,7 @@ export function FacturacionPanel({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>CUIT</TableHead>
                     <TableHead className="text-right">Facturas</TableHead>
                     <TableHead className="text-right">Facturado</TableHead>
                   </TableRow>
@@ -127,7 +129,7 @@ export function FacturacionPanel({
                 <TableBody>
                   {facturacion.porCliente.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                         Sin facturación en el período.
                       </TableCell>
                     </TableRow>
@@ -135,6 +137,7 @@ export function FacturacionPanel({
                     facturacion.porCliente.map((c) => (
                       <TableRow key={c.cliente_id}>
                         <TableCell className="font-medium">{c.razon_social}</TableCell>
+                        <TableCell className="tabular-nums text-muted-foreground">{c.cuit ?? "—"}</TableCell>
                         <TableCell className="text-right tabular-nums text-muted-foreground">{c.cantidad}</TableCell>
                         <TableCell className="text-right font-medium tabular-nums">{formatCurrency(c.monto)}</TableCell>
                       </TableRow>
