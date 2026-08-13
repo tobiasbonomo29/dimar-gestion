@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Landmark } from "lucide-react";
+import { Plus, Trash2, Loader2, Landmark, FileSpreadsheet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { ORIGENES_FONDOS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { exportToExcel } from "@/lib/export-excel";
 import type { AporteCapital } from "@/types/database";
 import { crearAporte, deleteAporte } from "../actions";
 import { aporteDefaults, type AporteFormValues } from "../schema";
@@ -72,6 +73,23 @@ export function AportesPanel({ aportes, total }: { aportes: AporteCapital[]; tot
     router.refresh();
   }
 
+  function descargarExcel() {
+    exportToExcel(
+      aportes.map((a) => ({
+        Fecha: formatDate(a.fecha),
+        Aportante: a.aportante,
+        Origen:
+          a.origen && a.origen in ORIGENES_FONDOS
+            ? ORIGENES_FONDOS[a.origen as keyof typeof ORIGENES_FONDOS]
+            : a.origen ?? "",
+        Monto: a.monto,
+        Nota: a.nota ?? "",
+      })),
+      "aportes-capital",
+      "Aportes de capital",
+    );
+  }
+
   async function handleDelete() {
     if (!aBorrar) return;
     const result = await deleteAporte(aBorrar.id);
@@ -100,10 +118,16 @@ export function AportesPanel({ aportes, total }: { aportes: AporteCapital[]; tot
             </div>
           </CardContent>
         </Card>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nuevo aporte
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={descargarExcel} disabled={aportes.length === 0}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </Button>
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nuevo aporte
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-lg border">

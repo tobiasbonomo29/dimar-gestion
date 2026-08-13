@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, FileSpreadsheet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MEDIOS_PAGO, TIPOS_EGRESO, ORIGENES_FONDOS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { exportToExcel } from "@/lib/export-excel";
 import { cn } from "@/lib/utils";
 import type { Egreso, TipoEgreso } from "@/types/database";
 
@@ -39,6 +40,25 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
   const total = filtrados.reduce((a, e) => a + Number(e.monto), 0);
   const esCompra = tipo === "compra";
 
+  function descargarExcel() {
+    exportToExcel(
+      egresos.map((e) => ({
+        Fecha: formatDate(e.fecha),
+        Concepto: e.concepto,
+        Categoría: e.categoria ?? "",
+        [esCompra ? "Proveedor" : "Destinatario"]: e.proveedor ?? "",
+        Origen:
+          e.origen && e.origen in ORIGENES_FONDOS
+            ? ORIGENES_FONDOS[e.origen as keyof typeof ORIGENES_FONDOS]
+            : "",
+        Medio: MEDIOS_PAGO[e.medio_pago],
+        Monto: Number(e.monto),
+      })),
+      esCompra ? "compras" : "erogaciones",
+      esCompra ? "Compras" : "Erogaciones",
+    );
+  }
+
   async function handleDelete() {
     if (!aBorrar) return;
     const result = await deleteEgreso(aBorrar.id);
@@ -57,16 +77,22 @@ export function EgresosPanel({ egresos, tipo }: { egresos: Egreso[]; tipo: TipoE
           {egresos.length} {egresos.length === 1 ? "registro" : "registros"} · Total{" "}
           <span className="font-medium tabular-nums text-foreground">{formatCurrency(total)}</span>
         </p>
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Nueva {esCompra ? "compra" : "erogación"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={descargarExcel} disabled={egresos.length === 0}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nueva {esCompra ? "compra" : "erogación"}
+          </Button>
+        </div>
       </div>
 
       {/* Filtro por origen del dinero */}

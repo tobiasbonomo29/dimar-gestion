@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -12,13 +13,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { exportToExcel } from "@/lib/export-excel";
 import type { FacturaImpaga } from "../queries";
 
 export function PorCobrarPanel({ facturas }: { facturas: FacturaImpaga[] }) {
   const totalSaldo = facturas.reduce((a, f) => a + f.saldo, 0);
 
+  function descargarExcel() {
+    exportToExcel(
+      facturas.map((f) => ({
+        "N°": f.numero,
+        Cliente: f.razon_social,
+        Fecha: formatDate(f.fecha),
+        Total: f.total,
+        Pagado: f.pagado,
+        Saldo: f.saldo,
+      })),
+      "por-cobrar",
+      "Por cobrar",
+    );
+  }
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Facturas pendientes de cobro.</p>
+        <Button variant="outline" size="sm" onClick={descargarExcel} disabled={facturas.length === 0}>
+          <FileSpreadsheet className="h-4 w-4" />
+          Descargar Excel
+        </Button>
+      </div>
+
       <Card>
         <CardContent className="flex items-center gap-4 p-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted">
