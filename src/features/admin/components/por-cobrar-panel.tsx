@@ -96,8 +96,8 @@ export function PorCobrarPanel({ facturas }: { facturas: FacturaImpaga[] }) {
         </Table>
       </div>
       <p className="text-xs text-muted-foreground">
-        Considera pagos asociados a cada factura. Si registraste un pago general del cliente
-        (sin factura puntual), esa factura puede figurar acá igual.
+        Los pagos del cliente se imputan a sus facturas de la más vieja a la más nueva. Una
+        factura aparece acá cuando el saldo de pagos del cliente todavía no la cubre.
       </p>
     </div>
   );

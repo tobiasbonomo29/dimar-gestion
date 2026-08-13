@@ -257,44 +257,52 @@ export type FacturaImpaga = {
   saldo: number;
 };
 
-type PedCobro = { id: string; numero: number; total: number; fecha_creacion: string; clientes: { razon_social: string } | null };
+type PedCobro = {
+  id: string;
+  numero: number;
+  total: number;
+  fecha_creacion: string;
+  cliente_id: string;
+  clientes: { razon_social: string } | null;
+};
 
 /** Pedidos facturados cuyo pago registrado (asociado al pedido) es menor al total. */
 export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
   const supabase = await createClient();
-  const { data: peds, error } = await supabase
-    .from("pedidos")
-    .select("id, numero, total, fecha_creacion, clientes(razon_social)")
-    .in("estado", ESTADOS_GENERAN_DEUDA)
-    .order("fecha_creacion", { ascending: false })
-    .returns<PedCobro[]>();
-  if (error) throw new Error(error.message);
+  // Igual que la cuenta corriente: los pagos son a nivel cliente y se imputan
+  // a sus facturas de la más vieja a la más nueva (FIFO).
+  const [pedsRes, pagosRes] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, numero, total, fecha_creacion, cliente_id, clientes(razon_social)")
+      .in("estado", ESTADOS_GENERAN_DEUDA)
+      .order("fecha_creacion", { ascending: true })
+      .returns<PedCobro[]>(),
+    supabase.from("pagos").select("cliente_id, monto"),
+  ]);
+  if (pedsRes.error) throw new Error(pedsRes.error.message);
+  if (pagosRes.error) throw new Error(pagosRes.error.message);
 
-  const ids = (peds ?? []).map((p) => p.id);
-  const pagadoPorPed = new Map<string, number>();
-  if (ids.length > 0) {
-    const { data: pagos, error: e2 } = await supabase
-      .from("pagos")
-      .select("pedido_id, monto")
-      .in("pedido_id", ids);
-    if (e2) throw new Error(e2.message);
-    for (const pg of pagos ?? []) {
-      if (!pg.pedido_id) continue;
-      pagadoPorPed.set(pg.pedido_id, (pagadoPorPed.get(pg.pedido_id) ?? 0) + Number(pg.monto));
-    }
+  // Saldo disponible por cliente = suma de todos sus pagos.
+  const disponible = new Map<string, number>();
+  for (const pg of pagosRes.data ?? []) {
+    disponible.set(pg.cliente_id, (disponible.get(pg.cliente_id) ?? 0) + Number(pg.monto));
   }
 
   const res: FacturaImpaga[] = [];
-  for (const p of peds ?? []) {
-    const pagado = pagadoPorPed.get(p.id) ?? 0;
-    const saldo = Number(p.total) - pagado;
+  for (const p of pedsRes.data ?? []) {
+    const total = Number(p.total);
+    const disp = disponible.get(p.cliente_id) ?? 0;
+    const pagado = Math.min(total, Math.max(disp, 0));
+    disponible.set(p.cliente_id, disp - pagado);
+    const saldo = total - pagado;
     if (saldo > 0.01) {
       res.push({
         id: p.id,
         numero: p.numero,
         razon_social: p.clientes?.razon_social ?? "—",
         fecha: p.fecha_creacion,
-        total: Number(p.total),
+        total,
         pagado,
         saldo,
       });

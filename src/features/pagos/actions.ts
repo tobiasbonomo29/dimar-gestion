@@ -35,6 +35,8 @@ export async function registrarPago(
 
   revalidatePath(`/clientes/${parsed.data.cliente_id}`);
   revalidatePath("/clientes");
+  revalidatePath("/administracion");
+  revalidatePath("/pedidos");
   revalidatePath("/");
   return { ok: true, data: { id: data.id } };
 }
@@ -46,6 +48,8 @@ export async function eliminarPago(id: string, clienteId: string): Promise<Actio
 
   revalidatePath(`/clientes/${clienteId}`);
   revalidatePath("/clientes");
+  revalidatePath("/administracion");
+  revalidatePath("/pedidos");
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
