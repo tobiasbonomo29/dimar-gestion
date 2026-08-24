@@ -28,9 +28,22 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // La verificación de sesión hace una llamada de red a Supabase. En el Edge de
+  // Vercel, si esa llamada tarda o se cuelga, el middleware daba 504
+  // (MIDDLEWARE_INVOCATION_TIMEOUT). Le ponemos un timeout: si no responde a
+  // tiempo, dejamos pasar el request sin redirigir (RLS igual protege los datos).
+  const getUserPromise = supabase.auth.getUser();
+  const timeout = new Promise<Awaited<typeof getUserPromise>>((_, reject) =>
+    setTimeout(() => reject(new Error("auth-timeout")), 4000),
+  );
+
+  let user = null;
+  try {
+    const { data } = await Promise.race([getUserPromise, timeout]);
+    user = data.user;
+  } catch {
+    return supabaseResponse;
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
 
