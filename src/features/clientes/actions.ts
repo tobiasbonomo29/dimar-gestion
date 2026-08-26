@@ -29,6 +29,7 @@ export async function createCliente(
       cuit: parsed.data.cuit ?? null,
       direccion: parsed.data.direccion ?? null,
       notas: parsed.data.notas ?? null,
+      vendedor_id: parsed.data.vendedor_id ?? null,
     })
     .select("id")
     .single();
@@ -60,6 +61,7 @@ export async function updateCliente(
       cuit: parsed.data.cuit ?? null,
       direccion: parsed.data.direccion ?? null,
       notas: parsed.data.notas ?? null,
+      vendedor_id: parsed.data.vendedor_id ?? null,
     })
     .eq("id", id);
 

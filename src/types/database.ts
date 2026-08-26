@@ -30,6 +30,15 @@ export type MedioPago = "efectivo" | "transferencia" | "cheque" | "tarjeta" | "o
 
 export type TipoEgreso = "compra" | "erogacion";
 
+export type Vendedor = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  comision_porcentaje: number;
+  activo: boolean;
+  created_at: string;
+}
+
 export type Cliente = {
   id: string;
   razon_social: string;
@@ -40,6 +49,7 @@ export type Cliente = {
   cuit: string | null;
   direccion: string | null;
   notas: string | null;
+  vendedor_id: string | null;
   fecha_alta: string;
   created_at: string;
   updated_at: string;
@@ -89,6 +99,7 @@ export type Pedido = {
   fecha_estimada_entrega: string | null;
   origen: OrigenPedido | null;
   notas: string | null;
+  vendedor_id: string | null;
   subtotal: number;
   descuento_porcentaje: number;
   descuento_monto: number;
@@ -251,7 +262,7 @@ export interface Database {
     Tables: {
       clientes: {
         Row: Row<Cliente>;
-        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal">;
+        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal" | "vendedor_id">;
         Update: Update<Cliente>;
         Relationships: [];
       };
@@ -269,7 +280,7 @@ export interface Database {
       };
       pedidos: {
         Row: Row<Pedido>;
-        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "created_at" | "updated_at">;
+        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "vendedor_id" | "created_at" | "updated_at">;
         Update: Update<Pedido>;
         Relationships: [];
       };
@@ -307,6 +318,12 @@ export interface Database {
         Row: Row<AlfabetaEstado>;
         Insert: Insert<AlfabetaEstado, "unidad_id" | "updated_at">;
         Update: Update<AlfabetaEstado>;
+        Relationships: [];
+      };
+      vendedores: {
+        Row: Row<Vendedor>;
+        Insert: Insert<Vendedor, "id" | "unidad_id" | "comision_porcentaje" | "activo" | "created_at">;
+        Update: Update<Vendedor>;
         Relationships: [];
       };
       pagos: {

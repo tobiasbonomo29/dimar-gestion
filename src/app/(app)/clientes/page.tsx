@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getClientesConSaldo } from "@/features/clientes/queries";
+import { getVendedores } from "@/features/vendedores/queries";
 import { ClientesClient } from "@/features/clientes/components/clientes-client";
 import { ClientesSearch } from "@/features/clientes/components/clientes-search";
 import { DescargarPendientes } from "@/features/clientes/components/descargar-pendientes";
@@ -13,7 +14,10 @@ export default async function ClientesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const clientes = await getClientesConSaldo(q);
+  const [clientes, vendedores] = await Promise.all([
+    getClientesConSaldo(q),
+    getVendedores(true),
+  ]);
   const totalPorCobrar = clientes.reduce((acc, c) => acc + Math.max(c.saldo, 0), 0);
 
   return (
@@ -34,7 +38,7 @@ export default async function ClientesPage({
         <DescargarPendientes clientes={clientes} />
       </div>
 
-      <ClientesClient clientes={clientes} />
+      <ClientesClient clientes={clientes} vendedores={vendedores} />
     </div>
   );
 }

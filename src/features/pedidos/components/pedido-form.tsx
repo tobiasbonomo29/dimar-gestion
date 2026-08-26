@@ -25,7 +25,7 @@ import {
 import { ClienteFormDialog } from "@/features/clientes/components/cliente-form-dialog";
 import { ORIGENES_PEDIDO } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
-import type { Cliente } from "@/types/database";
+import type { Cliente, Vendedor } from "@/types/database";
 import type { ProductoConVariantes } from "@/features/productos/queries";
 import { getProductoNombre } from "@/features/productos/display";
 import { createPedido } from "../actions";
@@ -35,9 +35,12 @@ import {
   type PedidoFormValues,
 } from "../schema";
 
+const SIN_VENDEDOR = "__none__";
+
 interface Props {
   clientes: Cliente[];
   catalogo: ProductoConVariantes[];
+  vendedores: Vendedor[];
 }
 
 // Opción de catálogo: producto ("p:id") o variante ("v:id").
@@ -90,9 +93,14 @@ function buildCatalogo(catalogo: ProductoConVariantes[]): {
   return { options, map };
 }
 
-export function PedidoForm({ clientes, catalogo }: Props) {
+export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
   const router = useRouter();
   const [clienteDialogOpen, setClienteDialogOpen] = React.useState(false);
+  // cliente_id -> vendedor_id, para autocompletar el vendedor al elegir cliente.
+  const clienteVendedor = React.useMemo(
+    () => new Map(clientes.map((c) => [c.id, c.vendedor_id])),
+    [clientes],
+  );
   // Clientes creados en esta sesión (antes de que refresque la data del server).
   const [extraClientes, setExtraClientes] = React.useState<ComboboxOption[]>([]);
   // Guarda qué opción de catálogo se eligió en cada fila (para el combobox).
@@ -213,7 +221,11 @@ export function PedidoForm({ clientes, catalogo }: Props) {
                     id="cliente"
                     options={clienteOptions}
                     value={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(id) => {
+                      field.onChange(id);
+                      const vend = clienteVendedor.get(id);
+                      if (vend) setValue("vendedor_id", vend);
+                    }}
                     placeholder="Buscar o elegir cliente..."
                     searchPlaceholder="Buscar por razón social o email..."
                     emptyText="No hay clientes con ese nombre."
@@ -261,6 +273,35 @@ export function PedidoForm({ clientes, catalogo }: Props) {
             <div className="grid gap-2">
               <Label htmlFor="fecha_entrega">Entrega estimada</Label>
               <Input id="fecha_entrega" type="date" {...register("fecha_estimada_entrega")} />
+            </div>
+
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="vendedor">Vendedor</Label>
+              <Controller
+                control={control}
+                name="vendedor_id"
+                render={({ field }) => (
+                  <Select
+                    value={field.value || SIN_VENDEDOR}
+                    onValueChange={(v) => field.onChange(v === SIN_VENDEDOR ? "" : v)}
+                  >
+                    <SelectTrigger id="vendedor">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SIN_VENDEDOR}>Sin asignar</SelectItem>
+                      {vendedores.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se autocompleta con el vendedor del cliente; podés cambiarlo.
+              </p>
             </div>
 
             <div className="grid gap-2 sm:col-span-2">
@@ -465,6 +506,7 @@ export function PedidoForm({ clientes, catalogo }: Props) {
       <ClienteFormDialog
         open={clienteDialogOpen}
         onOpenChange={setClienteDialogOpen}
+        vendedores={vendedores}
         onCreated={(id, razonSocial) => {
           setExtraClientes((prev) => [...prev, { value: id, label: razonSocial }]);
           setValue("cliente_id", id);

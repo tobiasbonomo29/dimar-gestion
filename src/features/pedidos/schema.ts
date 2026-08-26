@@ -19,6 +19,10 @@ export const pedidoItemSchema = z.object({
 
 export const pedidoSchema = z.object({
   cliente_id: z.string().uuid("Elegí un cliente"),
+  vendedor_id: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
   origen: z
     .enum(ORIGENES)
     .or(z.literal(""))
@@ -48,6 +52,7 @@ export type PedidoItemFormValues = {
 
 export type PedidoFormValues = {
   cliente_id: string;
+  vendedor_id: string;
   origen: (typeof ORIGENES)[number] | "";
   fecha_estimada_entrega: string;
   descuento_porcentaje: string;
@@ -66,6 +71,7 @@ export const pedidoItemDefaults: PedidoItemFormValues = {
 
 export const pedidoDefaults: PedidoFormValues = {
   cliente_id: "",
+  vendedor_id: "",
   origen: "",
   fecha_estimada_entrega: "",
   descuento_porcentaje: "0",

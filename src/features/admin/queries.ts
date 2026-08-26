@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
-import type { Egreso, TipoEgreso, AporteCapital } from "@/types/database";
+import type { Egreso, TipoEgreso, AporteCapital, Vendedor } from "@/types/database";
 
 function hastaExclusivo(hasta: string): string {
   const d = new Date(hasta + "T00:00:00");
@@ -309,6 +309,137 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
     }
   }
   return res.sort((a, b) => b.saldo - a.saldo);
+}
+
+// -----------------------------------------------------------------------------
+// Liquidación de vendedores (comisión sobre lo facturado, neto sin IVA)
+// -----------------------------------------------------------------------------
+export type LiquidacionPedido = {
+  pedido_id: string;
+  numero: number;
+  fecha: string;
+  razon_social: string;
+  cuit: string | null;
+  total: number;
+  neto: number; // venta sin impuestos (total − IVA)
+  comision: number;
+};
+
+export type LiquidacionVendedor = {
+  vendedor_id: string;
+  nombre: string;
+  comision_porcentaje: number;
+  cantPedidos: number;
+  netoTotal: number;
+  comisionTotal: number;
+  pedidos: LiquidacionPedido[];
+};
+
+export type Liquidacion = {
+  desde: string;
+  hasta: string;
+  vendedores: LiquidacionVendedor[];
+  netoTotal: number;
+  comisionTotal: number;
+  sinVendedor: { cantPedidos: number; netoTotal: number };
+};
+
+type PedLiq = {
+  id: string;
+  numero: number;
+  fecha_creacion: string;
+  total: number;
+  iva_monto: number;
+  vendedor_id: string | null;
+  clientes: { razon_social: string; cuit: string | null } | null;
+};
+
+/**
+ * Liquidación de comisiones por vendedor entre dos fechas (inclusive).
+ * Considera solo pedidos facturados (los que generan deuda). La base de la
+ * comisión es la "venta sin impuestos" = total − IVA; el porcentaje sale de
+ * cada vendedor (comision_porcentaje, 3% por defecto). Si se pasa vendedorId,
+ * filtra a ese vendedor.
+ */
+export async function getLiquidacion(
+  desde: string,
+  hasta: string,
+  vendedorId?: string,
+): Promise<Liquidacion> {
+  const supabase = await createClient();
+
+  const [pedsRes, vendedoresRes] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, numero, fecha_creacion, total, iva_monto, vendedor_id, clientes(razon_social, cuit)")
+      .in("estado", ESTADOS_GENERAN_DEUDA)
+      .gte("fecha_creacion", desde)
+      .lt("fecha_creacion", hastaExclusivo(hasta))
+      .order("fecha_creacion", { ascending: true })
+      .returns<PedLiq[]>(),
+    supabase.from("vendedores").select("*").returns<Vendedor[]>(),
+  ]);
+  if (pedsRes.error) throw new Error(pedsRes.error.message);
+  if (vendedoresRes.error) throw new Error(vendedoresRes.error.message);
+
+  const vendedores = vendedoresRes.data ?? [];
+  const vendMap = new Map(vendedores.map((v) => [v.id, v]));
+
+  const grupos = new Map<string, LiquidacionVendedor>();
+  const sinVendedor = { cantPedidos: 0, netoTotal: 0 };
+
+  for (const p of pedsRes.data ?? []) {
+    const total = Number(p.total);
+    const neto = total - Number(p.iva_monto);
+
+    if (!p.vendedor_id) {
+      sinVendedor.cantPedidos += 1;
+      sinVendedor.netoTotal += neto;
+      continue;
+    }
+    if (vendedorId && p.vendedor_id !== vendedorId) continue;
+
+    const vend = vendMap.get(p.vendedor_id);
+    const pct = vend ? Number(vend.comision_porcentaje) : 3;
+    const comision = Math.round(neto * pct) / 100;
+
+    let g = grupos.get(p.vendedor_id);
+    if (!g) {
+      g = {
+        vendedor_id: p.vendedor_id,
+        nombre: vend?.nombre ?? "Vendedor eliminado",
+        comision_porcentaje: pct,
+        cantPedidos: 0,
+        netoTotal: 0,
+        comisionTotal: 0,
+        pedidos: [],
+      };
+      grupos.set(p.vendedor_id, g);
+    }
+    g.cantPedidos += 1;
+    g.netoTotal += neto;
+    g.comisionTotal += comision;
+    g.pedidos.push({
+      pedido_id: p.id,
+      numero: p.numero,
+      fecha: p.fecha_creacion,
+      razon_social: p.clientes?.razon_social ?? "—",
+      cuit: p.clientes?.cuit ?? null,
+      total,
+      neto,
+      comision,
+    });
+  }
+
+  const lista = [...grupos.values()].sort((a, b) => b.comisionTotal - a.comisionTotal);
+  return {
+    desde,
+    hasta,
+    vendedores: lista,
+    netoTotal: lista.reduce((a, v) => a + v.netoTotal, 0),
+    comisionTotal: lista.reduce((a, v) => a + v.comisionTotal, 0),
+    sinVendedor,
+  };
 }
 
 // -----------------------------------------------------------------------------

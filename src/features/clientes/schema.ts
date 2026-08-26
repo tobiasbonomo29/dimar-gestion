@@ -36,6 +36,10 @@ export const clienteSchema = z.object({
   cuit: optionalText,
   direccion: optionalText,
   notas: optionalText,
+  vendedor_id: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? undefined : v)),
 });
 
 export type ClienteFormValues = z.infer<typeof clienteSchema>;
@@ -49,4 +53,5 @@ export const clienteDefaults: ClienteFormValues = {
   cuit: undefined,
   direccion: undefined,
   notas: undefined,
+  vendedor_id: undefined,
 };

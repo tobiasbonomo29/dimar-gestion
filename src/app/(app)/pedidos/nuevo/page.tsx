@@ -2,14 +2,16 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getClientes } from "@/features/clientes/queries";
 import { getProductos } from "@/features/productos/queries";
+import { getVendedores } from "@/features/vendedores/queries";
 import { PedidoForm } from "@/features/pedidos/components/pedido-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function NuevoPedidoPage() {
-  const [clientes, catalogo] = await Promise.all([
+  const [clientes, catalogo, vendedores] = await Promise.all([
     getClientes(),
     getProductos(),
+    getVendedores(true),
   ]);
 
   return (
@@ -28,7 +30,7 @@ export default async function NuevoPedidoPage() {
         </p>
       </div>
 
-      <PedidoForm clientes={clientes} catalogo={catalogo} />
+      <PedidoForm clientes={clientes} catalogo={catalogo} vendedores={vendedores} />
     </div>
   );
 }

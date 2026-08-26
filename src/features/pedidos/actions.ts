@@ -25,6 +25,7 @@ export async function createPedido(
     .from("pedidos")
     .insert({
       cliente_id: pedido.cliente_id,
+      vendedor_id: pedido.vendedor_id ?? null,
       origen: pedido.origen ?? null,
       fecha_estimada_entrega: pedido.fecha_estimada_entrega,
       descuento_porcentaje: pedido.descuento_porcentaje,

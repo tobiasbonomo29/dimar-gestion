@@ -4,7 +4,9 @@ import {
   getFacturacion,
   getFacturasImpagas,
   getAportes,
+  getLiquidacion,
 } from "@/features/admin/queries";
+import { getVendedores } from "@/features/vendedores/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +27,17 @@ export default async function AdministracionPage({
   const desde = qd ?? iso(new Date(now.getFullYear(), 0, 1));
   const hasta = qh ?? iso(now);
 
-  const [estado, compras, erogaciones, facturacion, impagas, aportesData] = await Promise.all([
-    getEstadoResultados(desde, hasta),
-    getEgresos("compra"),
-    getEgresos("erogacion"),
-    getFacturacion(desde, hasta),
-    getFacturasImpagas(),
-    getAportes(desde, hasta),
-  ]);
+  const [estado, compras, erogaciones, facturacion, impagas, aportesData, liquidacion, vendedores] =
+    await Promise.all([
+      getEstadoResultados(desde, hasta),
+      getEgresos("compra"),
+      getEgresos("erogacion"),
+      getFacturacion(desde, hasta),
+      getFacturasImpagas(),
+      getAportes(desde, hasta),
+      getLiquidacion(desde, hasta),
+      getVendedores(),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -51,6 +56,8 @@ export default async function AdministracionPage({
         impagas={impagas}
         aportes={aportesData.aportes}
         aportesTotal={aportesData.total}
+        liquidacion={liquidacion}
+        vendedores={vendedores}
       />
     </div>
   );

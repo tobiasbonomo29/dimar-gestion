@@ -20,12 +20,23 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { Vendedor } from "@/types/database";
 import type { ClienteConSaldo } from "../queries";
 import { ClienteFormDialog } from "./cliente-form-dialog";
 import { deleteCliente } from "../actions";
 
-export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
+export function ClientesClient({
+  clientes,
+  vendedores = [],
+}: {
+  clientes: ClienteConSaldo[];
+  vendedores?: Vendedor[];
+}) {
   const router = useRouter();
+  const vendedorNombre = React.useMemo(
+    () => new Map(vendedores.map((v) => [v.id, v.nombre])),
+    [vendedores],
+  );
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ClienteConSaldo | null>(null);
   const [toDelete, setToDelete] = React.useState<ClienteConSaldo | null>(null);
@@ -69,6 +80,7 @@ export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
               <TableHead>Email</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Cond. fiscal</TableHead>
+              <TableHead>Vendedor</TableHead>
               <TableHead className="text-right">Saldo</TableHead>
               <TableHead>Alta</TableHead>
               <TableHead className="w-[90px] text-right">Acciones</TableHead>
@@ -77,7 +89,7 @@ export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
           <TableBody>
             {clientes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   No hay clientes. Creá el primero con “Nuevo cliente”.
                 </TableCell>
               </TableRow>
@@ -109,6 +121,11 @@ export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
                       <Badge className="border-slate-200 bg-slate-100 text-slate-700">
                         {CONDICIONES_FISCALES[c.condicion_fiscal]}
                       </Badge>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/clientes/${c.id}`} className="block text-muted-foreground">
+                      {c.vendedor_id ? vendedorNombre.get(c.vendedor_id) ?? "—" : "—"}
                     </Link>
                   </TableCell>
                   <TableCell className="text-right">
@@ -161,6 +178,7 @@ export function ClientesClient({ clientes }: { clientes: ClienteConSaldo[] }) {
         open={formOpen}
         onOpenChange={setFormOpen}
         cliente={editing}
+        vendedores={vendedores}
       />
 
       <ConfirmDialog

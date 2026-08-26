@@ -27,14 +27,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
-import type { Cliente } from "@/types/database";
+import type { Cliente, Vendedor } from "@/types/database";
 import { createCliente, updateCliente } from "../actions";
 import { clienteSchema, clienteDefaults, type ClienteFormValues } from "../schema";
+
+const SIN_VENDEDOR = "__none__";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cliente?: Cliente | null;
+  /** Vendedores disponibles para asignar (opcional). */
+  vendedores?: Vendedor[];
   /** Callback opcional con el cliente creado (para encadenar desde pedidos). */
   onCreated?: (id: string, razonSocial: string) => void;
 }
@@ -49,10 +53,11 @@ function toFormValues(c: Cliente): ClienteFormValues {
     cuit: c.cuit ?? undefined,
     direccion: c.direccion ?? undefined,
     notas: c.notas ?? undefined,
+    vendedor_id: c.vendedor_id ?? undefined,
   };
 }
 
-export function ClienteFormDialog({ open, onOpenChange, cliente, onCreated }: Props) {
+export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, onCreated }: Props) {
   const router = useRouter();
   const isEdit = Boolean(cliente);
 
@@ -76,6 +81,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onCreated }: Pr
   }, [open, cliente, reset]);
 
   const condicion = watch("condicion_fiscal");
+  const vendedorId = watch("vendedor_id");
 
   async function onSubmit(values: ClienteFormValues) {
     if (isEdit) {
@@ -175,6 +181,30 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onCreated }: Pr
               <Input id="direccion" {...register("direccion")} />
             </div>
           </div>
+
+          {vendedores && vendedores.length > 0 && (
+            <div className="grid gap-2">
+              <Label htmlFor="vendedor_id">Vendedor</Label>
+              <Select
+                value={vendedorId ?? SIN_VENDEDOR}
+                onValueChange={(v) =>
+                  setValue("vendedor_id", v === SIN_VENDEDOR ? undefined : v)
+                }
+              >
+                <SelectTrigger id="vendedor_id">
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SIN_VENDEDOR}>Sin asignar</SelectItem>
+                  {vendedores.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="notas">Notas</Label>
