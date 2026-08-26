@@ -49,7 +49,7 @@ export const clienteDefaults: ClienteFormValues = {
   nombre_contacto: undefined,
   email: undefined,
   telefono: undefined,
-  condicion_fiscal: "consumidor_final",
+  condicion_fiscal: "responsable_inscripto",
   cuit: undefined,
   direccion: undefined,
   notas: undefined,
