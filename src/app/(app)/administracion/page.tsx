@@ -5,6 +5,7 @@ import {
   getFacturasImpagas,
   getAportes,
   getLiquidacion,
+  getPendientePorProducto,
 } from "@/features/admin/queries";
 import { getVendedores } from "@/features/vendedores/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
@@ -27,7 +28,7 @@ export default async function AdministracionPage({
   const desde = qd ?? iso(new Date(now.getFullYear(), 0, 1));
   const hasta = qh ?? iso(now);
 
-  const [estado, compras, erogaciones, facturacion, impagas, aportesData, liquidacion, vendedores] =
+  const [estado, compras, erogaciones, facturacion, impagas, aportesData, liquidacion, vendedores, pendiente] =
     await Promise.all([
       getEstadoResultados(desde, hasta),
       getEgresos("compra"),
@@ -37,6 +38,7 @@ export default async function AdministracionPage({
       getAportes(desde, hasta),
       getLiquidacion(desde, hasta),
       getVendedores(),
+      getPendientePorProducto(),
     ]);
 
   return (
@@ -58,6 +60,7 @@ export default async function AdministracionPage({
         aportesTotal={aportesData.total}
         liquidacion={liquidacion}
         vendedores={vendedores}
+        pendiente={pendiente}
       />
     </div>
   );

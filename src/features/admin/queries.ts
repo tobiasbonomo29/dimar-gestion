@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
-import type { Egreso, TipoEgreso, AporteCapital, Vendedor } from "@/types/database";
+import type { Egreso, TipoEgreso, AporteCapital, Vendedor, EstadoPedido } from "@/types/database";
 
 function hastaExclusivo(hasta: string): string {
   const d = new Date(hasta + "T00:00:00");
@@ -474,6 +474,81 @@ export async function getLiquidacion(
     comisionTotal: lista.reduce((a, v) => a + v.comisionTotal, 0),
     sinVendedor,
   };
+}
+
+// -----------------------------------------------------------------------------
+// Pendiente por producto (a producir / entregar)
+// -----------------------------------------------------------------------------
+// Pedidos comprometidos que todavía NO se despacharon (excluye cotizaciones y
+// cancelados). Es una foto del momento, no depende del período.
+const ESTADOS_PENDIENTE_ENTREGA: EstadoPedido[] = [
+  "confirmado",
+  "facturado",
+  "en_produccion",
+  "listo_despachar",
+];
+
+export type PendienteProducto = {
+  producto_id: string | null;
+  descripcion: string;
+  pedidos: number; // cantidad de pedidos que lo incluyen
+  pendiente: number; // unidades pedidas y no entregadas
+  stock: number | null; // stock actual (si es producto del catálogo)
+  aProducir: number; // lo que falta fabricar = max(pendiente − stock, 0)
+};
+
+export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
+  const supabase = await createClient();
+
+  const { data: peds, error } = await supabase
+    .from("pedidos")
+    .select("id")
+    .in("estado", ESTADOS_PENDIENTE_ENTREGA);
+  if (error) throw new Error(error.message);
+  const ids = (peds ?? []).map((p) => p.id);
+  if (ids.length === 0) return [];
+
+  const { data: items, error: e2 } = await supabase
+    .from("pedido_items")
+    .select("pedido_id, producto_id, descripcion, cantidad")
+    .in("pedido_id", ids);
+  if (e2) throw new Error(e2.message);
+
+  // Stock actual de los productos del catálogo involucrados.
+  const prodIds = [...new Set((items ?? []).map((i) => i.producto_id).filter(Boolean))] as string[];
+  const stockMap = new Map<string, number>();
+  if (prodIds.length > 0) {
+    const { data: prods } = await supabase.from("productos").select("id, stock").in("id", prodIds);
+    for (const p of prods ?? []) stockMap.set(p.id, Number(p.stock));
+  }
+
+  type Acc = { producto_id: string | null; descripcion: string; pendiente: number; pedidos: Set<string> };
+  const map = new Map<string, Acc>();
+  for (const it of items ?? []) {
+    const key = it.producto_id ?? `txt:${it.descripcion.trim().toLowerCase()}`;
+    let a = map.get(key);
+    if (!a) {
+      a = { producto_id: it.producto_id ?? null, descripcion: it.descripcion, pendiente: 0, pedidos: new Set() };
+      map.set(key, a);
+    }
+    a.pendiente += Number(it.cantidad);
+    a.pedidos.add(it.pedido_id);
+  }
+
+  return [...map.values()]
+    .map((a) => {
+      const stock = a.producto_id ? stockMap.get(a.producto_id) ?? 0 : null;
+      const aProducir = stock != null ? Math.max(a.pendiente - stock, 0) : a.pendiente;
+      return {
+        producto_id: a.producto_id,
+        descripcion: a.descripcion,
+        pedidos: a.pedidos.size,
+        pendiente: a.pendiente,
+        stock,
+        aProducir,
+      };
+    })
+    .sort((x, y) => y.pendiente - x.pendiente);
 }
 
 // -----------------------------------------------------------------------------

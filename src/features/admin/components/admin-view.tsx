@@ -5,13 +5,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/format";
 import type { AporteCapital, Egreso, Vendedor } from "@/types/database";
-import type { EstadoResultados, Facturacion, FacturaImpaga, Liquidacion } from "../queries";
+import type {
+  EstadoResultados,
+  Facturacion,
+  FacturaImpaga,
+  Liquidacion,
+  PendienteProducto,
+} from "../queries";
 import { PeriodSelector } from "./period-selector";
 import { EstadoResultadosPanel } from "./estado-resultados-panel";
 import { ExportarResultados } from "./exportar-resultados";
 import { EgresosPanel } from "./egresos-panel";
 import { FacturacionPanel } from "./facturacion-panel";
 import { PorCobrarPanel } from "./por-cobrar-panel";
+import { PendientePanel } from "./pendiente-panel";
 import { AportesPanel } from "./aportes-panel";
 import { LiquidacionPanel } from "./liquidacion-panel";
 
@@ -25,6 +32,7 @@ export function AdminView({
   aportesTotal,
   liquidacion,
   vendedores,
+  pendiente,
 }: {
   estado: EstadoResultados;
   compras: Egreso[];
@@ -35,6 +43,7 @@ export function AdminView({
   aportesTotal: number;
   liquidacion: Liquidacion;
   vendedores: Vendedor[];
+  pendiente: PendienteProducto[];
 }) {
   return (
     <div className="space-y-4">
@@ -48,6 +57,7 @@ export function AdminView({
           <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
           <TabsTrigger value="facturacion">Facturación</TabsTrigger>
           <TabsTrigger value="cobrar">Por cobrar</TabsTrigger>
+          <TabsTrigger value="pendiente">Pendiente por producto</TabsTrigger>
           <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
           <TabsTrigger value="aportes">Aportes de capital</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
@@ -78,6 +88,10 @@ export function AdminView({
 
         <TabsContent value="cobrar">
           <PorCobrarPanel facturas={impagas} />
+        </TabsContent>
+
+        <TabsContent value="pendiente">
+          <PendientePanel items={pendiente} />
         </TabsContent>
 
         <TabsContent value="liquidacion">
