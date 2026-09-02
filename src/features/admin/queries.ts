@@ -552,6 +552,142 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
 }
 
 // -----------------------------------------------------------------------------
+// Estadísticas: ventas por producto (mensual)
+// -----------------------------------------------------------------------------
+export type VentaProductoMes = {
+  descripcion: string;
+  totalCantidad: number;
+  totalMonto: number;
+  porMes: Record<string, { cantidad: number; monto: number }>;
+};
+export type VentasPorProducto = {
+  meses: { key: string; label: string }[];
+  productos: VentaProductoMes[];
+  totalMonto: number;
+};
+
+export async function getVentasPorProductoMensual(
+  desde: string,
+  hasta: string,
+): Promise<VentasPorProducto> {
+  const supabase = await createClient();
+
+  const { data: peds, error } = await supabase
+    .from("pedidos")
+    .select("id, fecha_creacion")
+    .in("estado", ESTADOS_GENERAN_DEUDA)
+    .gte("fecha_creacion", desde)
+    .lt("fecha_creacion", hastaExclusivo(hasta));
+  if (error) throw new Error(error.message);
+
+  // Lista de meses del período.
+  const meses: { key: string; label: string }[] = [];
+  const cur = new Date(desde + "T00:00:00");
+  const fin = new Date(hasta + "T00:00:00");
+  while (cur <= fin) {
+    const k = mesKey(cur);
+    if (!meses.some((m) => m.key === k)) meses.push({ key: k, label: mesLabel(k) });
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  const pedMes = new Map<string, string>();
+  for (const p of peds ?? []) pedMes.set(p.id, mesKey(new Date(p.fecha_creacion)));
+  const ids = [...pedMes.keys()];
+  if (ids.length === 0) return { meses, productos: [], totalMonto: 0 };
+
+  const map = new Map<string, VentaProductoMes>();
+  // Trae los ítems en lotes (por si hay muchos pedidos).
+  for (let i = 0; i < ids.length; i += 200) {
+    const lote = ids.slice(i, i + 200);
+    const { data: items, error: e2 } = await supabase
+      .from("pedido_items")
+      .select("pedido_id, descripcion, cantidad, subtotal")
+      .in("pedido_id", lote);
+    if (e2) throw new Error(e2.message);
+    for (const it of items ?? []) {
+      const mes = pedMes.get(it.pedido_id);
+      if (!mes) continue;
+      let p = map.get(it.descripcion);
+      if (!p) {
+        p = { descripcion: it.descripcion, totalCantidad: 0, totalMonto: 0, porMes: {} };
+        map.set(it.descripcion, p);
+      }
+      const cant = Number(it.cantidad);
+      const monto = Number(it.subtotal);
+      p.totalCantidad += cant;
+      p.totalMonto += monto;
+      const cell = p.porMes[mes] ?? { cantidad: 0, monto: 0 };
+      cell.cantidad += cant;
+      cell.monto += monto;
+      p.porMes[mes] = cell;
+    }
+  }
+
+  const productos = [...map.values()].sort((a, b) => b.totalMonto - a.totalMonto);
+  return { meses, productos, totalMonto: productos.reduce((a, p) => a + p.totalMonto, 0) };
+}
+
+// -----------------------------------------------------------------------------
+// Estadísticas: stock de insumos (valorizado al último precio de compra)
+// -----------------------------------------------------------------------------
+export type InsumoStock = {
+  id: string;
+  nombre: string;
+  presentacion: string | null;
+  unidad_medida: string;
+  stock: number;
+  stock_minimo: number;
+  bajo: boolean;
+  ultimoPrecio: number;
+  valor: number;
+};
+export type StockInsumos = { insumos: InsumoStock[]; totalValor: number; bajoMinimo: number };
+
+export async function getStockInsumos(): Promise<StockInsumos> {
+  const supabase = await createClient();
+  const [insRes, itemsRes] = await Promise.all([
+    supabase.from("insumos").select("*").order("nombre", { ascending: true }),
+    supabase
+      .from("compra_items")
+      .select("insumo_id, precio_unitario, created_at")
+      .not("insumo_id", "is", null)
+      .order("created_at", { ascending: false }),
+  ]);
+  if (insRes.error) throw new Error(insRes.error.message);
+  if (itemsRes.error) throw new Error(itemsRes.error.message);
+
+  // Último precio de compra por insumo (el primero, porque vienen desc por fecha).
+  const lastPrice = new Map<string, number>();
+  for (const it of itemsRes.data ?? []) {
+    if (it.insumo_id && !lastPrice.has(it.insumo_id)) {
+      lastPrice.set(it.insumo_id, Number(it.precio_unitario));
+    }
+  }
+
+  const insumos: InsumoStock[] = (insRes.data ?? []).map((i) => {
+    const ultimoPrecio = lastPrice.get(i.id) ?? 0;
+    const stock = Number(i.stock);
+    return {
+      id: i.id,
+      nombre: i.nombre,
+      presentacion: i.presentacion,
+      unidad_medida: i.unidad_medida,
+      stock,
+      stock_minimo: Number(i.stock_minimo),
+      bajo: Number(i.stock_minimo) > 0 && stock <= Number(i.stock_minimo),
+      ultimoPrecio,
+      valor: stock * ultimoPrecio,
+    };
+  });
+
+  return {
+    insumos,
+    totalValor: insumos.reduce((a, x) => a + x.valor, 0),
+    bajoMinimo: insumos.filter((x) => x.bajo).length,
+  };
+}
+
+// -----------------------------------------------------------------------------
 // Aportes de capital
 // -----------------------------------------------------------------------------
 export async function getAportes(

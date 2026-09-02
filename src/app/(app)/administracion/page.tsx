@@ -6,6 +6,8 @@ import {
   getAportes,
   getLiquidacion,
   getPendientePorProducto,
+  getVentasPorProductoMensual,
+  getStockInsumos,
 } from "@/features/admin/queries";
 import { getVendedores } from "@/features/vendedores/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
@@ -28,18 +30,31 @@ export default async function AdministracionPage({
   const desde = qd ?? iso(new Date(now.getFullYear(), 0, 1));
   const hasta = qh ?? iso(now);
 
-  const [estado, compras, erogaciones, facturacion, impagas, aportesData, liquidacion, vendedores, pendiente] =
-    await Promise.all([
-      getEstadoResultados(desde, hasta),
-      getEgresos("compra"),
-      getEgresos("erogacion"),
-      getFacturacion(desde, hasta),
-      getFacturasImpagas(),
-      getAportes(desde, hasta),
-      getLiquidacion(desde, hasta),
-      getVendedores(),
-      getPendientePorProducto(),
-    ]);
+  const [
+    estado,
+    compras,
+    erogaciones,
+    facturacion,
+    impagas,
+    aportesData,
+    liquidacion,
+    vendedores,
+    pendiente,
+    ventasProducto,
+    stockInsumos,
+  ] = await Promise.all([
+    getEstadoResultados(desde, hasta),
+    getEgresos("compra"),
+    getEgresos("erogacion"),
+    getFacturacion(desde, hasta),
+    getFacturasImpagas(),
+    getAportes(desde, hasta),
+    getLiquidacion(desde, hasta),
+    getVendedores(),
+    getPendientePorProducto(),
+    getVentasPorProductoMensual(desde, hasta),
+    getStockInsumos(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -61,6 +76,8 @@ export default async function AdministracionPage({
         liquidacion={liquidacion}
         vendedores={vendedores}
         pendiente={pendiente}
+        ventasProducto={ventasProducto}
+        stockInsumos={stockInsumos}
       />
     </div>
   );

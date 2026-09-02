@@ -11,6 +11,8 @@ import type {
   FacturaImpaga,
   Liquidacion,
   PendienteProducto,
+  VentasPorProducto,
+  StockInsumos,
 } from "../queries";
 import { PeriodSelector } from "./period-selector";
 import { EstadoResultadosPanel } from "./estado-resultados-panel";
@@ -19,6 +21,7 @@ import { EgresosPanel } from "./egresos-panel";
 import { FacturacionPanel } from "./facturacion-panel";
 import { PorCobrarPanel } from "./por-cobrar-panel";
 import { PendientePanel } from "./pendiente-panel";
+import { EstadisticasPanel } from "./estadisticas-panel";
 import { AportesPanel } from "./aportes-panel";
 import { LiquidacionPanel } from "./liquidacion-panel";
 
@@ -33,6 +36,8 @@ export function AdminView({
   liquidacion,
   vendedores,
   pendiente,
+  ventasProducto,
+  stockInsumos,
 }: {
   estado: EstadoResultados;
   compras: Egreso[];
@@ -44,6 +49,8 @@ export function AdminView({
   liquidacion: Liquidacion;
   vendedores: Vendedor[];
   pendiente: PendienteProducto[];
+  ventasProducto: VentasPorProducto;
+  stockInsumos: StockInsumos;
 }) {
   return (
     <div className="space-y-4">
@@ -58,6 +65,7 @@ export function AdminView({
           <TabsTrigger value="facturacion">Facturación</TabsTrigger>
           <TabsTrigger value="cobrar">Por cobrar</TabsTrigger>
           <TabsTrigger value="pendiente">Pendiente por producto</TabsTrigger>
+          <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
           <TabsTrigger value="liquidacion">Liquidación</TabsTrigger>
           <TabsTrigger value="aportes">Aportes de capital</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
@@ -92,6 +100,10 @@ export function AdminView({
 
         <TabsContent value="pendiente">
           <PendientePanel items={pendiente} />
+        </TabsContent>
+
+        <TabsContent value="estadisticas">
+          <EstadisticasPanel ventas={ventasProducto} stock={stockInsumos} />
         </TabsContent>
 
         <TabsContent value="liquidacion">
