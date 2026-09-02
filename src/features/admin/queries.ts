@@ -477,24 +477,33 @@ export async function getLiquidacion(
 }
 
 // -----------------------------------------------------------------------------
-// Pendiente por producto (a producir / entregar)
+// Pendiente por producto (a entregar)
 // -----------------------------------------------------------------------------
-// Pedidos comprometidos que todavía NO se despacharon (excluye cotizaciones y
-// cancelados). Es una foto del momento, no depende del período.
-const ESTADOS_PENDIENTE_ENTREGA: EstadoPedido[] = [
-  "confirmado",
-  "facturado",
-  "en_produccion",
-  "listo_despachar",
-];
+// Solo pedidos CONFIRMADOS o FACTURADOS (compromiso firme, todavía sin
+// despachar). Es una foto del momento, no depende del período.
+const ESTADOS_PENDIENTE_ENTREGA: EstadoPedido[] = ["confirmado", "facturado"];
+
+export type PendienteDetalle = {
+  pedido_id: string;
+  numero: number;
+  cliente: string;
+  estado: EstadoPedido;
+  cantidad: number;
+};
 
 export type PendienteProducto = {
   producto_id: string | null;
   descripcion: string;
   pedidos: number; // cantidad de pedidos que lo incluyen
   pendiente: number; // unidades pedidas y no entregadas
-  stock: number | null; // stock actual (si es producto del catálogo)
-  aProducir: number; // lo que falta fabricar = max(pendiente − stock, 0)
+  detalle: PendienteDetalle[]; // a qué cliente / pedido / cantidad
+};
+
+type PedPend = {
+  id: string;
+  numero: number;
+  estado: EstadoPedido;
+  clientes: { razon_social: string } | null;
 };
 
 export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
@@ -502,10 +511,12 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
 
   const { data: peds, error } = await supabase
     .from("pedidos")
-    .select("id")
-    .in("estado", ESTADOS_PENDIENTE_ENTREGA);
+    .select("id, numero, estado, clientes(razon_social)")
+    .in("estado", ESTADOS_PENDIENTE_ENTREGA)
+    .returns<PedPend[]>();
   if (error) throw new Error(error.message);
-  const ids = (peds ?? []).map((p) => p.id);
+  const pedMap = new Map((peds ?? []).map((p) => [p.id, p]));
+  const ids = [...pedMap.keys()];
   if (ids.length === 0) return [];
 
   const { data: items, error: e2 } = await supabase
@@ -514,40 +525,42 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
     .in("pedido_id", ids);
   if (e2) throw new Error(e2.message);
 
-  // Stock actual de los productos del catálogo involucrados.
-  const prodIds = [...new Set((items ?? []).map((i) => i.producto_id).filter(Boolean))] as string[];
-  const stockMap = new Map<string, number>();
-  if (prodIds.length > 0) {
-    const { data: prods } = await supabase.from("productos").select("id, stock").in("id", prodIds);
-    for (const p of prods ?? []) stockMap.set(p.id, Number(p.stock));
-  }
-
-  type Acc = { producto_id: string | null; descripcion: string; pendiente: number; pedidos: Set<string> };
+  type Acc = {
+    producto_id: string | null;
+    descripcion: string;
+    pendiente: number;
+    pedidos: Set<string>;
+    detalle: PendienteDetalle[];
+  };
   const map = new Map<string, Acc>();
   for (const it of items ?? []) {
     const key = it.producto_id ?? `txt:${it.descripcion.trim().toLowerCase()}`;
     let a = map.get(key);
     if (!a) {
-      a = { producto_id: it.producto_id ?? null, descripcion: it.descripcion, pendiente: 0, pedidos: new Set() };
+      a = { producto_id: it.producto_id ?? null, descripcion: it.descripcion, pendiente: 0, pedidos: new Set(), detalle: [] };
       map.set(key, a);
     }
-    a.pendiente += Number(it.cantidad);
+    const ped = pedMap.get(it.pedido_id);
+    const cant = Number(it.cantidad);
+    a.pendiente += cant;
     a.pedidos.add(it.pedido_id);
+    a.detalle.push({
+      pedido_id: it.pedido_id,
+      numero: ped?.numero ?? 0,
+      cliente: ped?.clientes?.razon_social ?? "—",
+      estado: ped?.estado ?? "confirmado",
+      cantidad: cant,
+    });
   }
 
   return [...map.values()]
-    .map((a) => {
-      const stock = a.producto_id ? stockMap.get(a.producto_id) ?? 0 : null;
-      const aProducir = stock != null ? Math.max(a.pendiente - stock, 0) : a.pendiente;
-      return {
-        producto_id: a.producto_id,
-        descripcion: a.descripcion,
-        pedidos: a.pedidos.size,
-        pendiente: a.pendiente,
-        stock,
-        aProducir,
-      };
-    })
+    .map((a) => ({
+      producto_id: a.producto_id,
+      descripcion: a.descripcion,
+      pedidos: a.pedidos.size,
+      pendiente: a.pendiente,
+      detalle: a.detalle.sort((x, y) => y.numero - x.numero),
+    }))
     .sort((x, y) => y.pendiente - x.pendiente);
 }
 
