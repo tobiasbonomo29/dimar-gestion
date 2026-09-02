@@ -50,6 +50,7 @@ export type Cliente = {
   direccion: string | null;
   notas: string | null;
   vendedor_id: string | null;
+  condicion_pago_dias: number;
   fecha_alta: string;
   created_at: string;
   updated_at: string;
@@ -97,6 +98,7 @@ export type Pedido = {
   fecha_creacion: string;
   estado: EstadoPedido;
   fecha_estimada_entrega: string | null;
+  fecha_vencimiento: string | null;
   origen: OrigenPedido | null;
   notas: string | null;
   vendedor_id: string | null;
@@ -262,7 +264,7 @@ export interface Database {
     Tables: {
       clientes: {
         Row: Row<Cliente>;
-        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal" | "vendedor_id">;
+        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal" | "vendedor_id" | "condicion_pago_dias">;
         Update: Update<Cliente>;
         Relationships: [];
       };
@@ -280,7 +282,7 @@ export interface Database {
       };
       pedidos: {
         Row: Row<Pedido>;
-        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "vendedor_id" | "created_at" | "updated_at">;
+        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "vendedor_id" | "fecha_vencimiento" | "created_at" | "updated_at">;
         Update: Update<Pedido>;
         Relationships: [];
       };

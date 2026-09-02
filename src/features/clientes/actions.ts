@@ -30,6 +30,7 @@ export async function createCliente(
       direccion: parsed.data.direccion ?? null,
       notas: parsed.data.notas ?? null,
       vendedor_id: parsed.data.vendedor_id ?? null,
+      condicion_pago_dias: parsed.data.condicion_pago_dias,
     })
     .select("id")
     .single();
@@ -62,6 +63,7 @@ export async function updateCliente(
       direccion: parsed.data.direccion ?? null,
       notas: parsed.data.notas ?? null,
       vendedor_id: parsed.data.vendedor_id ?? null,
+      condicion_pago_dias: parsed.data.condicion_pago_dias,
     })
     .eq("id", id);
 

@@ -54,6 +54,7 @@ function toFormValues(c: Cliente): ClienteFormValues {
     direccion: c.direccion ?? undefined,
     notas: c.notas ?? undefined,
     vendedor_id: c.vendedor_id ?? undefined,
+    condicion_pago_dias: c.condicion_pago_dias ?? 0,
   };
 }
 
@@ -180,6 +181,20 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, onC
               <Label htmlFor="direccion">Dirección</Label>
               <Input id="direccion" {...register("direccion")} />
             </div>
+          </div>
+
+          <div className="grid gap-2 sm:max-w-[260px]">
+            <Label htmlFor="condicion_pago_dias">Condición de pago (días)</Label>
+            <Input
+              id="condicion_pago_dias"
+              type="number"
+              min="0"
+              max="365"
+              {...register("condicion_pago_dias")}
+            />
+            <p className="text-xs text-muted-foreground">
+              0 = contado. Ej: 30, 60. Define el vencimiento de sus facturas.
+            </p>
           </div>
 
           {vendedores && vendedores.length > 0 && (

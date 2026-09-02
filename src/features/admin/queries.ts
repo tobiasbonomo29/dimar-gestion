@@ -247,11 +247,16 @@ export async function getFacturacion(desde: string, hasta: string): Promise<Fact
 // -----------------------------------------------------------------------------
 // Facturas impagas (pendientes de cobro)
 // -----------------------------------------------------------------------------
+export type EstadoVencimiento = "vencido" | "por_vencer" | "al_dia";
+
 export type FacturaImpaga = {
   id: string;
   numero: number;
   razon_social: string;
   fecha: string;
+  vencimiento: string;
+  estado: EstadoVencimiento;
+  diasParaVencer: number; // negativo = días vencida
   total: number;
   pagado: number;
   saldo: number;
@@ -262,9 +267,21 @@ type PedCobro = {
   numero: number;
   total: number;
   fecha_creacion: string;
+  fecha_vencimiento: string | null;
   cliente_id: string;
-  clientes: { razon_social: string } | null;
+  clientes: { razon_social: string; condicion_pago_dias: number } | null;
 };
+
+/** Vencimiento de la factura: explícito, o fecha de creación + días de plazo del cliente. */
+function calcVencimiento(fechaCreacion: string, fechaVenc: string | null, dias: number): string {
+  if (fechaVenc) return fechaVenc;
+  const d = new Date(fechaCreacion);
+  d.setDate(d.getDate() + (dias || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Umbral (en días) para considerar una factura "próxima a vencer". */
+const DIAS_POR_VENCER = 7;
 
 /** Pedidos facturados cuyo pago registrado (asociado al pedido) es menor al total. */
 export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
@@ -274,7 +291,7 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
   const [pedsRes, pagosRes] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, numero, total, fecha_creacion, cliente_id, clientes(razon_social)")
+      .select("id, numero, total, fecha_creacion, fecha_vencimiento, cliente_id, clientes(razon_social, condicion_pago_dias)")
       .in("estado", ESTADOS_GENERAN_DEUDA)
       .order("fecha_creacion", { ascending: true })
       .returns<PedCobro[]>(),
@@ -289,6 +306,9 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
     disponible.set(pg.cliente_id, (disponible.get(pg.cliente_id) ?? 0) + Number(pg.monto));
   }
 
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
   const res: FacturaImpaga[] = [];
   for (const p of pedsRes.data ?? []) {
     const total = Number(p.total);
@@ -297,18 +317,32 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
     disponible.set(p.cliente_id, disp - pagado);
     const saldo = total - pagado;
     if (saldo > 0.01) {
+      const vencimiento = calcVencimiento(
+        p.fecha_creacion,
+        p.fecha_vencimiento,
+        p.clientes?.condicion_pago_dias ?? 0,
+      );
+      const diasParaVencer = Math.round(
+        (new Date(vencimiento + "T00:00:00").getTime() - hoy.getTime()) / 86400000,
+      );
+      const estado: EstadoVencimiento =
+        diasParaVencer < 0 ? "vencido" : diasParaVencer <= DIAS_POR_VENCER ? "por_vencer" : "al_dia";
       res.push({
         id: p.id,
         numero: p.numero,
         razon_social: p.clientes?.razon_social ?? "—",
         fecha: p.fecha_creacion,
+        vencimiento,
+        estado,
+        diasParaVencer,
         total,
         pagado,
         saldo,
       });
     }
   }
-  return res.sort((a, b) => b.saldo - a.saldo);
+  // Ordena: primero lo más vencido (menor diasParaVencer), luego por saldo.
+  return res.sort((a, b) => a.diasParaVencer - b.diasParaVencer || b.saldo - a.saldo);
 }
 
 // -----------------------------------------------------------------------------
