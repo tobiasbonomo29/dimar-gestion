@@ -239,6 +239,45 @@ export type Egreso = {
   updated_at: string;
 }
 
+export type Insumo = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  presentacion: string | null;
+  unidad_medida: string;
+  categoria: string | null;
+  stock: number;
+  stock_minimo: number;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Compra = {
+  id: string;
+  unidad_id: string;
+  numero: number;
+  fecha: string;
+  proveedor: string | null;
+  medio_pago: MedioPago;
+  total: number;
+  nota: string | null;
+  egreso_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CompraItem = {
+  id: string;
+  compra_id: string;
+  insumo_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  created_at: string;
+}
+
 export type Unidad = {
   id: string;
   nombre: string;
@@ -356,6 +395,24 @@ export interface Database {
         Row: Row<Medicamento>;
         Insert: Insert<Medicamento, "id" | "unidad_id" | "activo" | "actualizado_en" | "created_at" | "updated_at">;
         Update: Update<Medicamento>;
+        Relationships: [];
+      };
+      insumos: {
+        Row: Row<Insumo>;
+        Insert: Insert<Insumo, "id" | "unidad_id" | "presentacion" | "unidad_medida" | "categoria" | "stock" | "stock_minimo" | "activo" | "created_at" | "updated_at">;
+        Update: Update<Insumo>;
+        Relationships: [];
+      };
+      compras: {
+        Row: Row<Compra>;
+        Insert: Insert<Compra, "id" | "unidad_id" | "numero" | "fecha" | "medio_pago" | "total" | "proveedor" | "nota" | "egreso_id" | "created_at" | "updated_at">;
+        Update: Update<Compra>;
+        Relationships: [];
+      };
+      compra_items: {
+        Row: Row<CompraItem>;
+        Insert: Insert<CompraItem, "id" | "insumo_id" | "subtotal" | "created_at">;
+        Update: Update<CompraItem>;
         Relationships: [];
       };
       unidades: {
