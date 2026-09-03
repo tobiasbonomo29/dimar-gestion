@@ -297,6 +297,30 @@ export type CompraItem = {
   created_at: string;
 }
 
+export type FacturaCompra = {
+  id: string;
+  unidad_id: string;
+  proveedor: string;
+  numero: string | null;
+  fecha: string;
+  vencimiento: string | null;
+  monto: number;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PagoCompra = {
+  id: string;
+  unidad_id: string;
+  factura_compra_id: string;
+  monto: number;
+  fecha: string;
+  medio_pago: MedioPago;
+  nota: string | null;
+  created_at: string;
+}
+
 export type Unidad = {
   id: string;
   nombre: string;
@@ -444,6 +468,18 @@ export interface Database {
         Row: Row<EntregaItem>;
         Insert: Insert<EntregaItem, "id" | "created_at">;
         Update: Update<EntregaItem>;
+        Relationships: [];
+      };
+      facturas_compra: {
+        Row: Row<FacturaCompra>;
+        Insert: Insert<FacturaCompra, "id" | "unidad_id" | "fecha" | "numero" | "vencimiento" | "nota" | "created_at" | "updated_at">;
+        Update: Update<FacturaCompra>;
+        Relationships: [];
+      };
+      pagos_compra: {
+        Row: Row<PagoCompra>;
+        Insert: Insert<PagoCompra, "id" | "unidad_id" | "fecha" | "medio_pago" | "nota" | "created_at">;
+        Update: Update<PagoCompra>;
         Relationships: [];
       };
       unidades: {

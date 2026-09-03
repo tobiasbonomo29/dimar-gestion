@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Package, ClipboardList, Truck, BarChart3, Pill, Store, UserCheck, Boxes } from "lucide-react";
+import { LayoutDashboard, Users, Package, ClipboardList, Truck, BarChart3, Pill, Store, UserCheck, Boxes, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/insumos", label: "Insumos", icon: Boxes },
   { href: "/medicamentos", label: "Medicamentos", icon: Pill },
   { href: "/administracion", label: "Administración", icon: BarChart3 },
+  { href: "/cuentas-pagar", label: "Cuentas a pagar", icon: Wallet },
   { href: "/vendedores", label: "Vendedores", icon: UserCheck },
   { href: "/puntos-venta", label: "Puntos de venta", icon: Store },
 ];
