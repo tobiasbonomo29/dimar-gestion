@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Factory, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { Factory, FileSpreadsheet, FileDown, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,15 +14,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useEmpresa } from "@/components/empresa-provider";
 import { ESTADOS_PEDIDO } from "@/lib/constants";
-import { formatNumber } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/export-excel";
 import type { PendienteProducto } from "../queries";
 
 export function PendientePanel({ items }: { items: PendienteProducto[] }) {
+  const empresa = useEmpresa();
   const [abierto, setAbierto] = React.useState<Set<string>>(new Set());
+  const [pdfLoading, setPdfLoading] = React.useState(false);
   const totalPendiente = items.reduce((a, i) => a + i.pendiente, 0);
+
+  async function descargarPDF() {
+    setPdfLoading(true);
+    try {
+      const [{ pdf }, { PendientePDF }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("./pendiente-pdf"),
+      ]);
+      const blob = await pdf(<PendientePDF items={items} empresa={empresa} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pendiente-produccion-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast.error("No se pudo generar el PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   function toggle(key: string) {
     setAbierto((prev) => {
@@ -39,6 +67,7 @@ export function PendientePanel({ items }: { items: PendienteProducto[] }) {
         Producto: i.descripcion,
         "N° pedido": d.numero,
         Cliente: d.cliente,
+        Cargado: formatDate(d.fecha),
         Estado: ESTADOS_PEDIDO[d.estado].label,
         Cantidad: d.cantidad,
       })),
@@ -53,10 +82,16 @@ export function PendientePanel({ items }: { items: PendienteProducto[] }) {
           Unidades pedidas y todavía no despachadas, por producto. Solo pedidos{" "}
           <b>confirmados o facturados</b>. Tocá una fila para ver a qué cliente y pedido corresponde.
         </p>
-        <Button variant="outline" size="sm" onClick={descargarExcel} disabled={items.length === 0}>
-          <FileSpreadsheet className="h-4 w-4" />
-          Descargar Excel
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={descargarPDF} disabled={items.length === 0 || pdfLoading}>
+            {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={descargarExcel} disabled={items.length === 0}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -113,6 +148,7 @@ export function PendientePanel({ items }: { items: PendienteProducto[] }) {
                                 <TableRow>
                                   <TableHead className="h-8">Pedido</TableHead>
                                   <TableHead className="h-8">Cliente</TableHead>
+                                  <TableHead className="h-8">Cargado</TableHead>
                                   <TableHead className="h-8">Estado</TableHead>
                                   <TableHead className="h-8 text-right">Cantidad</TableHead>
                                 </TableRow>
@@ -126,6 +162,7 @@ export function PendientePanel({ items }: { items: PendienteProducto[] }) {
                                       </Link>
                                     </TableCell>
                                     <TableCell className="py-1.5">{d.cliente}</TableCell>
+                                    <TableCell className="py-1.5 text-muted-foreground">{formatDate(d.fecha)}</TableCell>
                                     <TableCell className="py-1.5 text-muted-foreground">{ESTADOS_PEDIDO[d.estado].label}</TableCell>
                                     <TableCell className="py-1.5 text-right tabular-nums">{formatNumber(d.cantidad)}</TableCell>
                                   </TableRow>

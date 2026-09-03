@@ -488,6 +488,7 @@ export type PendienteDetalle = {
   numero: number;
   cliente: string;
   estado: EstadoPedido;
+  fecha: string; // fecha de creación del pedido (cuándo se cargó)
   cantidad: number;
 };
 
@@ -503,6 +504,7 @@ type PedPend = {
   id: string;
   numero: number;
   estado: EstadoPedido;
+  fecha_creacion: string;
   clientes: { razon_social: string } | null;
 };
 
@@ -511,7 +513,7 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
 
   const { data: peds, error } = await supabase
     .from("pedidos")
-    .select("id, numero, estado, clientes(razon_social)")
+    .select("id, numero, estado, fecha_creacion, clientes(razon_social)")
     .in("estado", ESTADOS_PENDIENTE_ENTREGA)
     .returns<PedPend[]>();
   if (error) throw new Error(error.message);
@@ -551,6 +553,7 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
       numero: ped?.numero ?? 0,
       cliente: ped?.clientes?.razon_social ?? "—",
       estado: ped?.estado ?? "confirmado",
+      fecha: ped?.fecha_creacion ?? "",
       cantidad: cant,
     });
   }
