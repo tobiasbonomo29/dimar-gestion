@@ -521,7 +521,7 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
 
   const { data: items, error: e2 } = await supabase
     .from("pedido_items")
-    .select("pedido_id, producto_id, descripcion, cantidad")
+    .select("pedido_id, producto_id, descripcion, cantidad, cantidad_entregada")
     .in("pedido_id", ids);
   if (e2) throw new Error(e2.message);
 
@@ -534,6 +534,9 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
   };
   const map = new Map<string, Acc>();
   for (const it of items ?? []) {
+    // Pendiente del ítem = pedido - entregado (contempla entregas parciales).
+    const cant = Number(it.cantidad) - Number(it.cantidad_entregada);
+    if (cant <= 0.0001) continue;
     const key = it.producto_id ?? `txt:${it.descripcion.trim().toLowerCase()}`;
     let a = map.get(key);
     if (!a) {
@@ -541,7 +544,6 @@ export async function getPendientePorProducto(): Promise<PendienteProducto[]> {
       map.set(key, a);
     }
     const ped = pedMap.get(it.pedido_id);
-    const cant = Number(it.cantidad);
     a.pendiente += cant;
     a.pedidos.add(it.pedido_id);
     a.detalle.push({

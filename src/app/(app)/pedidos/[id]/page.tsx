@@ -15,6 +15,7 @@ import { EstadoBadge } from "@/components/estado-badge";
 import { CambiarEstado } from "@/features/pedidos/components/cambiar-estado";
 import { DescargarCotizacion } from "@/features/pedidos/components/descargar-cotizacion";
 import { ComprobantesPanel } from "@/features/pedidos/components/comprobantes-panel";
+import { EntregasPanel } from "@/features/pedidos/components/entregas-panel";
 import { getPedido } from "@/features/pedidos/queries";
 import { getPuntosVenta } from "@/features/puntos-venta/queries";
 import { CONDICIONES_FISCALES, ORIGENES_PEDIDO } from "@/lib/constants";
@@ -69,23 +70,34 @@ export default async function PedidoDetallePage({
                   <TableRow>
                     <TableHead>Descripción</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
+                    <TableHead className="text-right">Entregado</TableHead>
+                    <TableHead className="text-right">Pendiente</TableHead>
                     <TableHead className="text-right">Precio unit.</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pedido.pedido_items.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell>{it.descripcion}</TableCell>
-                      <TableCell className="text-right tabular-nums">{it.cantidad}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatCurrency(it.precio_unitario)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatCurrency(it.subtotal)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pedido.pedido_items.map((it) => {
+                    const pend = Number(it.cantidad) - Number(it.cantidad_entregada);
+                    return (
+                      <TableRow key={it.id}>
+                        <TableCell>{it.descripcion}</TableCell>
+                        <TableCell className="text-right tabular-nums">{it.cantidad}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                          {it.cantidad_entregada}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {pend > 0 ? pend : <span className="text-[var(--viz-pos,#0ca30c)]">0</span>}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(it.precio_unitario)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(it.subtotal)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
 
@@ -143,6 +155,15 @@ export default async function PedidoDetallePage({
             </CardHeader>
             <CardContent>
               <ComprobantesPanel pedido={pedido} puntosVenta={puntosVenta} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Entregas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EntregasPanel pedido={pedido} />
             </CardContent>
           </Card>
 

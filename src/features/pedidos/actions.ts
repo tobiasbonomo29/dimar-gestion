@@ -237,3 +237,87 @@ export async function buscarItemPorCodigoBarras(codigo: string): Promise<ItemEsc
 
   return null;
 }
+
+// -----------------------------------------------------------------------------
+// Entregas parciales
+// -----------------------------------------------------------------------------
+export type EntregaInput = {
+  fecha?: string;
+  nota?: string;
+  items: { pedido_item_id: string; cantidad: number }[];
+};
+
+/**
+ * Registra una entrega (parcial o total): valida que no se entregue más de lo
+ * pendiente, guarda el evento en el historial de entregas y suma la cantidad
+ * entregada de cada ítem del pedido.
+ */
+export async function registrarEntrega(
+  pedidoId: string,
+  input: EntregaInput,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  // Ítems actuales del pedido (para validar contra el pendiente).
+  const { data: items, error: itErr } = await supabase
+    .from("pedido_items")
+    .select("id, descripcion, cantidad, cantidad_entregada")
+    .eq("pedido_id", pedidoId);
+  if (itErr) return { ok: false, error: itErr.message };
+  const itemMap = new Map((items ?? []).map((i) => [i.id, i]));
+
+  // Filtra y valida las cantidades a entregar.
+  const aEntregar: { pedido_item_id: string; descripcion: string; cantidad: number; nuevaEntregada: number }[] = [];
+  for (const inp of input.items) {
+    const cant = Number(inp.cantidad);
+    if (!cant || cant <= 0) continue;
+    const it = itemMap.get(inp.pedido_item_id);
+    if (!it) return { ok: false, error: "Ítem inválido." };
+    const pendiente = Number(it.cantidad) - Number(it.cantidad_entregada);
+    if (cant > pendiente + 0.0001) {
+      return { ok: false, error: `No podés entregar ${cant} de "${it.descripcion}" (pendiente ${pendiente}).` };
+    }
+    aEntregar.push({
+      pedido_item_id: it.id,
+      descripcion: it.descripcion,
+      cantidad: cant,
+      nuevaEntregada: Number(it.cantidad_entregada) + cant,
+    });
+  }
+  if (aEntregar.length === 0) {
+    return { ok: false, error: "Cargá al menos una cantidad a entregar." };
+  }
+
+  // Cabecera de la entrega.
+  const { data: entrega, error: eErr } = await supabase
+    .from("entregas")
+    .insert({ pedido_id: pedidoId, nota: input.nota?.trim() ? input.nota.trim() : null, ...(input.fecha ? { fecha: input.fecha } : {}) })
+    .select("id")
+    .single();
+  if (eErr) return { ok: false, error: eErr.message };
+
+  const { error: eiErr } = await supabase.from("entrega_items").insert(
+    aEntregar.map((a) => ({
+      entrega_id: entrega.id,
+      pedido_item_id: a.pedido_item_id,
+      descripcion: a.descripcion,
+      cantidad: a.cantidad,
+    })),
+  );
+  if (eiErr) {
+    await supabase.from("entregas").delete().eq("id", entrega.id);
+    return { ok: false, error: eiErr.message };
+  }
+
+  // Suma la cantidad entregada de cada ítem.
+  for (const a of aEntregar) {
+    await supabase
+      .from("pedido_items")
+      .update({ cantidad_entregada: a.nuevaEntregada })
+      .eq("id", a.pedido_item_id);
+  }
+
+  revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/administracion");
+  return { ok: true, data: undefined };
+}

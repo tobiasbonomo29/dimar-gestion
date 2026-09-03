@@ -158,8 +158,27 @@ export type PedidoItem = {
   variante_id: string | null;
   descripcion: string;
   cantidad: number;
+  cantidad_entregada: number;
   precio_unitario: number;
   subtotal: number;
+  created_at: string;
+}
+
+export type Entrega = {
+  id: string;
+  unidad_id: string;
+  pedido_id: string;
+  fecha: string;
+  nota: string | null;
+  created_at: string;
+}
+
+export type EntregaItem = {
+  id: string;
+  entrega_id: string;
+  pedido_item_id: string;
+  descripcion: string;
+  cantidad: number;
   created_at: string;
 }
 
@@ -327,7 +346,7 @@ export interface Database {
       };
       pedido_items: {
         Row: Row<PedidoItem>;
-        Insert: Insert<PedidoItem, "id" | "subtotal" | "created_at">;
+        Insert: Insert<PedidoItem, "id" | "subtotal" | "cantidad_entregada" | "created_at">;
         Update: Update<PedidoItem>;
         Relationships: [];
       };
@@ -413,6 +432,18 @@ export interface Database {
         Row: Row<CompraItem>;
         Insert: Insert<CompraItem, "id" | "insumo_id" | "subtotal" | "created_at">;
         Update: Update<CompraItem>;
+        Relationships: [];
+      };
+      entregas: {
+        Row: Row<Entrega>;
+        Insert: Insert<Entrega, "id" | "unidad_id" | "fecha" | "nota" | "created_at">;
+        Update: Update<Entrega>;
+        Relationships: [];
+      };
+      entrega_items: {
+        Row: Row<EntregaItem>;
+        Insert: Insert<EntregaItem, "id" | "created_at">;
+        Update: Update<EntregaItem>;
         Relationships: [];
       };
       unidades: {

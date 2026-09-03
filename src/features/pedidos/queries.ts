@@ -7,6 +7,8 @@ import type {
   HistorialEstado,
   Comprobante,
   EstadoPedido,
+  Entrega,
+  EntregaItem,
 } from "@/types/database";
 
 export type PedidoConCliente = Pedido & {
@@ -20,11 +22,14 @@ export type ComprobanteConPV = Comprobante & {
   puntos_venta: { numero: number; nombre: string | null } | null;
 };
 
+export type EntregaConItems = Entrega & { entrega_items: EntregaItem[] };
+
 export type PedidoDetalle = Pedido & {
   clientes: Cliente | null;
   pedido_items: PedidoItem[];
   historial_estado: HistorialEstado[];
   comprobantes: ComprobanteConPV[];
+  entregas: EntregaConItems[];
 };
 
 /** Lista de pedidos con datos básicos del cliente, filtrable por estado. */
@@ -89,11 +94,12 @@ export async function getPedido(id: string): Promise<PedidoDetalle | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, clientes(*), pedido_items(*), historial_estado(*), comprobantes(*, puntos_venta(numero, nombre))")
+    .select("*, clientes(*), pedido_items(*), historial_estado(*), comprobantes(*, puntos_venta(numero, nombre)), entregas(*, entrega_items(*))")
     .eq("id", id)
     .order("created_at", { referencedTable: "pedido_items", ascending: true })
     .order("fecha", { referencedTable: "historial_estado", ascending: false })
     .order("fecha", { referencedTable: "comprobantes", ascending: false })
+    .order("fecha", { referencedTable: "entregas", ascending: false })
     .maybeSingle<PedidoDetalle>();
 
   if (error) throw new Error(error.message);
