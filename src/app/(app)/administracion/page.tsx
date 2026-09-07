@@ -8,6 +8,7 @@ import {
   getPendientePorProducto,
   getVentasPorProductoMensual,
   getStockInsumos,
+  getReposicion,
 } from "@/features/admin/queries";
 import { getVendedores } from "@/features/vendedores/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
@@ -42,6 +43,7 @@ export default async function AdministracionPage({
     pendiente,
     ventasProducto,
     stockInsumos,
+    reposicion,
   ] = await Promise.all([
     getEstadoResultados(desde, hasta),
     getEgresos("compra"),
@@ -54,6 +56,7 @@ export default async function AdministracionPage({
     getPendientePorProducto(),
     getVentasPorProductoMensual(desde, hasta),
     getStockInsumos(),
+    getReposicion(desde, hasta),
   ]);
 
   return (
@@ -78,6 +81,7 @@ export default async function AdministracionPage({
         pendiente={pendiente}
         ventasProducto={ventasProducto}
         stockInsumos={stockInsumos}
+        reposicion={reposicion}
       />
     </div>
   );

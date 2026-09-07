@@ -646,6 +646,106 @@ export async function getVentasPorProductoMensual(
 }
 
 // -----------------------------------------------------------------------------
+// Reposición: cuánto falta producir para cubrir 1 mes de venta
+// -----------------------------------------------------------------------------
+export type ReposicionRow = {
+  producto_id: string;
+  codigo: string | null;
+  nombre: string;
+  unidad_medida: string;
+  stock: number;
+  vendido: number; // unidades vendidas en el período
+  demandaMensual: number; // promedio mensual de venta
+  faltaProducir: number; // max(demandaMensual - stock, 0)
+  coberturaMeses: number | null; // stock / demandaMensual (null si demanda 0)
+};
+
+export type Reposicion = {
+  desde: string;
+  hasta: string;
+  meses: number; // meses considerados en el promedio
+  rows: ReposicionRow[];
+  totalFaltaItems: number; // productos que hay que producir
+};
+
+/**
+ * Compara la venta promedio mensual (pedidos facturados en el período) contra el
+ * stock terminado, y calcula cuánto falta producir para cubrir 1 mes de venta.
+ * El promedio mensual = total vendido en el período / cantidad de meses del período.
+ */
+export async function getReposicion(desde: string, hasta: string): Promise<Reposicion> {
+  const supabase = await createClient();
+
+  const { data: peds, error } = await supabase
+    .from("pedidos")
+    .select("id")
+    .in("estado", ESTADOS_GENERAN_DEUDA)
+    .gte("fecha_creacion", desde)
+    .lt("fecha_creacion", hastaExclusivo(hasta));
+  if (error) throw new Error(error.message);
+  const ids = (peds ?? []).map((p) => p.id);
+
+  // Ventas por producto (solo ítems con producto del catálogo, para cruzar con stock).
+  const vendidoPorProducto = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const lote = ids.slice(i, i + 200);
+    if (lote.length === 0) break;
+    const { data: items, error: e2 } = await supabase
+      .from("pedido_items")
+      .select("producto_id, cantidad")
+      .in("pedido_id", lote)
+      .not("producto_id", "is", null);
+    if (e2) throw new Error(e2.message);
+    for (const it of items ?? []) {
+      if (!it.producto_id) continue;
+      vendidoPorProducto.set(it.producto_id, (vendidoPorProducto.get(it.producto_id) ?? 0) + Number(it.cantidad));
+    }
+  }
+
+  // Cantidad de meses del período (mínimo 1).
+  const cur = new Date(desde + "T00:00:00");
+  const fin = new Date(hasta + "T00:00:00");
+  const meses = Math.max(
+    1,
+    (fin.getFullYear() - cur.getFullYear()) * 12 + (fin.getMonth() - cur.getMonth()) + 1,
+  );
+
+  const { data: productos, error: e3 } = await supabase
+    .from("productos")
+    .select("id, codigo, nombre, unidad_medida, stock");
+  if (e3) throw new Error(e3.message);
+
+  const rows: ReposicionRow[] = [];
+  for (const p of productos ?? []) {
+    const vendido = vendidoPorProducto.get(p.id) ?? 0;
+    if (vendido <= 0) continue; // solo productos con venta en el período
+    const demandaMensual = vendido / meses;
+    const stock = Number(p.stock);
+    const faltaProducir = Math.max(demandaMensual - stock, 0);
+    rows.push({
+      producto_id: p.id,
+      codigo: p.codigo,
+      nombre: p.nombre,
+      unidad_medida: p.unidad_medida,
+      stock,
+      vendido,
+      demandaMensual,
+      faltaProducir,
+      coberturaMeses: demandaMensual > 0 ? stock / demandaMensual : null,
+    });
+  }
+  rows.sort((a, b) => b.faltaProducir - a.faltaProducir);
+
+  return {
+    desde,
+    hasta,
+    meses,
+    rows,
+    totalFaltaItems: rows.filter((r) => r.faltaProducir > 0).length,
+  };
+}
+
+// -----------------------------------------------------------------------------
 // Estadísticas: stock de insumos (valorizado al último precio de compra)
 // -----------------------------------------------------------------------------
 export type InsumoStock = {
