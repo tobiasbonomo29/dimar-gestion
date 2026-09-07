@@ -321,6 +321,35 @@ export type PagoCompra = {
   created_at: string;
 }
 
+export type RecetaItem = {
+  id: string;
+  unidad_id: string;
+  producto_id: string;
+  insumo_id: string;
+  cantidad: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Produccion = {
+  id: string;
+  unidad_id: string;
+  producto_id: string;
+  cantidad: number;
+  fecha: string;
+  nota: string | null;
+  created_at: string;
+}
+
+export type ProduccionItem = {
+  id: string;
+  produccion_id: string;
+  insumo_id: string | null;
+  descripcion: string;
+  cantidad: number;
+  created_at: string;
+}
+
 export type Unidad = {
   id: string;
   nombre: string;
@@ -480,6 +509,24 @@ export interface Database {
         Row: Row<PagoCompra>;
         Insert: Insert<PagoCompra, "id" | "unidad_id" | "fecha" | "medio_pago" | "nota" | "created_at">;
         Update: Update<PagoCompra>;
+        Relationships: [];
+      };
+      receta_items: {
+        Row: Row<RecetaItem>;
+        Insert: Insert<RecetaItem, "id" | "unidad_id" | "created_at" | "updated_at">;
+        Update: Update<RecetaItem>;
+        Relationships: [];
+      };
+      producciones: {
+        Row: Row<Produccion>;
+        Insert: Insert<Produccion, "id" | "unidad_id" | "fecha" | "nota" | "created_at">;
+        Update: Update<Produccion>;
+        Relationships: [];
+      };
+      produccion_items: {
+        Row: Row<ProduccionItem>;
+        Insert: Insert<ProduccionItem, "id" | "insumo_id" | "created_at">;
+        Update: Update<ProduccionItem>;
         Relationships: [];
       };
       unidades: {
