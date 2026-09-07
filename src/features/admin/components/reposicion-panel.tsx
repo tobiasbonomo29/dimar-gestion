@@ -116,9 +116,9 @@ export function ReposicionPanel({ data }: { data: Reposicion }) {
               </TableRow>
             ) : (
               data.rows.map((r) => (
-                <TableRow key={r.producto_id} className={cn(r.faltaProducir > 0 && "bg-amber-50/60")}>
+                <TableRow key={r.producto_id} className={cn(r.faltaProducir > 0 && "bg-destructive/10")}>
                   <TableCell className="font-medium">{r.codigo ? `${r.codigo} · ` : ""}{r.nombre}</TableCell>
-                  <TableCell className={cn("text-right tabular-nums", r.stock <= 0 && "text-red-600")}>
+                  <TableCell className={cn("text-right tabular-nums", r.stock <= 0 && "text-destructive")}>
                     {formatNumber(r.stock)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
@@ -127,8 +127,14 @@ export function ReposicionPanel({ data }: { data: Reposicion }) {
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                     {r.coberturaMeses != null ? `${r.coberturaMeses.toFixed(1)} m` : "—"}
                   </TableCell>
-                  <TableCell className={cn("text-right font-medium tabular-nums", r.faltaProducir > 0 ? "text-amber-700" : "text-muted-foreground")}>
-                    {r.faltaProducir > 0 ? formatNumber(Math.ceil(r.faltaProducir)) : "—"}
+                  <TableCell className="text-right">
+                    {r.faltaProducir > 0 ? (
+                      <span className="inline-block rounded-md bg-destructive px-2 py-0.5 font-semibold tabular-nums text-white">
+                        {formatNumber(Math.ceil(r.faltaProducir))}
+                      </span>
+                    ) : (
+                      <span className="tabular-nums text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
