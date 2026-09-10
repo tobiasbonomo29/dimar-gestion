@@ -437,7 +437,7 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
                   <span className="text-muted-foreground">Descuento</span>
                   <Input
                     type="number"
-                    step="0.5"
+                    step="any"
                     min="0"
                     max="100"
                     className="h-7 w-16"
