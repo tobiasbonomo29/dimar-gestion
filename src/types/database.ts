@@ -366,6 +366,135 @@ export type Perfil = {
   created_at: string;
 }
 
+// -----------------------------------------------------------------------------
+// Módulo Farmacia (carga manual) — ver supabase/migrations/0032_farmacia.sql
+// -----------------------------------------------------------------------------
+
+export type FarmTipoIngreso = "venta" | "otro";
+
+export type FarmRubroEgreso =
+  | "mercaderia"
+  | "fijo"
+  | "variable"
+  | "impuesto"
+  | "financiero"
+  | "otro";
+
+export type FarmModoCmv = "porcentaje" | "monto" | "mercaderia";
+
+export type FarmProveedor = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  categoria: string | null;
+  contacto: string | null;
+  tipo_pago: string | null;
+  telefono: string | null;
+  email: string | null;
+  cuit: string | null;
+  notas: string | null;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmIngreso = {
+  id: string;
+  unidad_id: string;
+  tipo: FarmTipoIngreso;
+  fecha: string;
+  semana: string | null;
+  concepto: string;
+  efectivo: number;
+  banco: number;
+  obra_social: number;
+  total: number;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmEgreso = {
+  id: string;
+  unidad_id: string;
+  rubro: FarmRubroEgreso;
+  fecha: string;
+  semana: string | null;
+  concepto: string;
+  categoria: string | null;
+  proveedor_id: string | null;
+  proveedor: string | null;
+  medio_pago: MedioPago;
+  monto: number;
+  vencimiento: string | null;
+  pagado: boolean;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmCostoFijo = {
+  id: string;
+  unidad_id: string;
+  concepto: string;
+  proveedor: string | null;
+  dia_vencimiento: number | null;
+  monto: number;
+  activo: boolean;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmEmpleado = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  puesto: string | null;
+  fecha_ingreso: string | null;
+  sueldo_bruto: number;
+  cargas_pct: number;
+  activo: boolean;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmSueldo = {
+  id: string;
+  unidad_id: string;
+  periodo: string; // 'YYYY-MM'
+  empleado_id: string | null;
+  empleado: string;
+  puesto: string | null;
+  sueldo_bruto: number;
+  cargas_pct: number;
+  cargas_monto: number;
+  sueldo_neto: number;
+  pagado: boolean;
+  nota: string | null;
+  costo_total: number; // generada: bruto + cargas
+  created_at: string;
+  updated_at: string;
+}
+
+export type FarmEerr = {
+  id: string;
+  unidad_id: string;
+  periodo: string; // 'YYYY-MM'
+  venta_neta: number | null;
+  otros_ingresos: number | null;
+  cmv_modo: FarmModoCmv;
+  cmv_porcentaje: number;
+  cmv_monto: number;
+  depreciacion: number;
+  intereses: number;
+  ganancias_pct: number;
+  nota: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 type Row<T> = T;
 type Insert<T, Optional extends keyof T> = Omit<T, Optional> & Partial<Pick<T, Optional>>;
 type Update<T> = Partial<T>;
@@ -547,6 +676,81 @@ export interface Database {
         Update: Update<Categoria>;
         Relationships: [];
       };
+      farm_proveedores: {
+        Row: Row<FarmProveedor>;
+        Insert: Insert<FarmProveedor, "id" | "unidad_id" | "activo" | "created_at" | "updated_at">;
+        Update: Update<FarmProveedor>;
+        Relationships: [];
+      };
+      farm_ingresos: {
+        Row: Row<FarmIngreso>;
+        Insert: Insert<
+          FarmIngreso,
+          "id" | "unidad_id" | "tipo" | "fecha" | "efectivo" | "banco" | "obra_social" | "created_at" | "updated_at"
+        >;
+        Update: Update<FarmIngreso>;
+        Relationships: [];
+      };
+      farm_egresos: {
+        Row: Row<FarmEgreso>;
+        Insert: Insert<
+          FarmEgreso,
+          "id" | "unidad_id" | "rubro" | "fecha" | "medio_pago" | "pagado" | "created_at" | "updated_at"
+        >;
+        Update: Update<FarmEgreso>;
+        Relationships: [];
+      };
+      farm_costos_fijos: {
+        Row: Row<FarmCostoFijo>;
+        Insert: Insert<FarmCostoFijo, "id" | "unidad_id" | "monto" | "activo" | "created_at" | "updated_at">;
+        Update: Update<FarmCostoFijo>;
+        Relationships: [];
+      };
+      farm_empleados: {
+        Row: Row<FarmEmpleado>;
+        Insert: Insert<
+          FarmEmpleado,
+          "id" | "unidad_id" | "sueldo_bruto" | "cargas_pct" | "activo" | "created_at" | "updated_at"
+        >;
+        Update: Update<FarmEmpleado>;
+        Relationships: [];
+      };
+      farm_sueldos: {
+        // costo_total es una columna generada: nunca se envía en un insert/update.
+        Row: Row<FarmSueldo>;
+        Insert: Insert<
+          Omit<FarmSueldo, "costo_total">,
+          | "id"
+          | "unidad_id"
+          | "sueldo_bruto"
+          | "cargas_pct"
+          | "cargas_monto"
+          | "sueldo_neto"
+          | "pagado"
+          | "created_at"
+          | "updated_at"
+        >;
+        Update: Update<Omit<FarmSueldo, "costo_total">>;
+        Relationships: [];
+      };
+      farm_eerr: {
+        Row: Row<FarmEerr>;
+        Insert: Insert<
+          FarmEerr,
+          | "id"
+          | "unidad_id"
+          | "cmv_modo"
+          | "cmv_porcentaje"
+          | "cmv_monto"
+          | "depreciacion"
+          | "intereses"
+          | "ganancias_pct"
+          | "created_at"
+          | "updated_at"
+        >;
+        Update: Update<FarmEerr>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -561,6 +765,9 @@ export interface Database {
       origen_pedido: OrigenPedido;
       tipo_comprobante: TipoComprobante;
       medio_pago: MedioPago;
+      farm_tipo_ingreso: FarmTipoIngreso;
+      farm_rubro_egreso: FarmRubroEgreso;
+      farm_modo_cmv: FarmModoCmv;
     };
     CompositeTypes: Record<string, never>;
   };

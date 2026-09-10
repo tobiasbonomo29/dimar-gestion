@@ -5,6 +5,8 @@ import type {
   OrigenPedido,
   TipoComprobante,
   TipoEgreso,
+  FarmTipoIngreso,
+  FarmRubroEgreso,
 } from "@/types/database";
 
 /**
@@ -136,3 +138,68 @@ export const EMPRESA = {
   email: process.env.NEXT_PUBLIC_EMPRESA_EMAIL ?? "",
   telefono: process.env.NEXT_PUBLIC_EMPRESA_TELEFONO ?? "",
 };
+
+// -----------------------------------------------------------------------------
+// Modulo Farmacia
+// -----------------------------------------------------------------------------
+
+/** Ingresos: venta de mostrador/OS vs otros ingresos (drogueria, NC PAMI...). */
+export const FARM_TIPOS_INGRESO: Record<FarmTipoIngreso, string> = {
+  venta: "Ingreso por venta",
+  otro: "Otro ingreso",
+};
+
+/**
+ * Rubro del egreso -> linea del estado de resultados en la que impacta.
+ * Los sueldos no estan aca: se liquidan en la pestana Sueldos.
+ */
+export const FARM_RUBROS_EGRESO: Record<FarmRubroEgreso, { label: string; linea: string }> = {
+  mercaderia: { label: "Mercaderia", linea: "Costo de mercaderia (CMV)" },
+  fijo: { label: "Gasto fijo", linea: "Costos fijos" },
+  variable: { label: "Gasto variable", linea: "Gastos variables" },
+  impuesto: { label: "Impuesto", linea: "Impuestos" },
+  financiero: { label: "Gasto financiero", linea: "Intereses financieros" },
+  otro: { label: "Otro", linea: "Gastos variables" },
+};
+
+/** Conceptos de ingreso mas usados en la farmacia (el usuario puede escribir otro). */
+export const FARM_CONCEPTOS_INGRESO = [
+  "Facturacion",
+  "NC ASOPRO",
+  "NC PAMI",
+  "NS PAMI",
+  "OSDE",
+  "Medicus",
+  "Swiss Medical",
+  "Monte Verde",
+  "Drogueria",
+  "Perfumeria",
+];
+
+/** Categorias sugeridas para los egresos de la farmacia. */
+export const FARM_CATEGORIAS_EGRESO = [
+  "Mercaderia",
+  "Proveedores",
+  "Alquiler",
+  "Servicios",
+  "Impuestos",
+  "Comisiones",
+  "Transporte",
+  "Materiales",
+  "Mantenimiento",
+  "Bancarios",
+  "Otros",
+];
+
+/** Categorias sugeridas para dar de alta proveedores de la farmacia. */
+export const FARM_CATEGORIAS_PROVEEDOR = [
+  "Reparto",
+  "Pago mercaderia",
+  "Pago a terceros",
+  "Insumos",
+  "Libreria",
+  "Comida",
+  "Comision",
+  "Servicios",
+  "Gastos diarios",
+];
