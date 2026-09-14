@@ -29,7 +29,25 @@ function inicioDeMes(): string {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 }
 
-export async function getDashboard(): Promise<DashboardData> {
+/** Reintenta una función async ante fallos transitorios (hipos del gateway de Supabase). */
+async function withRetry<T>(fn: () => Promise<T>, intentos = 2, esperaMs = 400): Promise<T> {
+  let ultimoError: unknown;
+  for (let i = 0; i < intentos; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      ultimoError = err;
+      if (i < intentos - 1) await new Promise((r) => setTimeout(r, esperaMs));
+    }
+  }
+  throw ultimoError;
+}
+
+export function getDashboard(): Promise<DashboardData> {
+  return withRetry(getDashboardOnce);
+}
+
+async function getDashboardOnce(): Promise<DashboardData> {
   const supabase = await createClient();
   const desde = inicioDeMes();
 
