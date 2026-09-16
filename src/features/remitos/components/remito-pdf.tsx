@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { bultosTexto, calcularBultos, resumenTexto, resumirBultos } from "@/lib/bultos";
 import type { Remito, RemitoItem } from "@/types/database";
 import type { Empresa } from "@/features/unidades/queries";
 
@@ -39,6 +40,23 @@ const styles = StyleSheet.create({
   colUnidadP: { width: "13%", textAlign: "left" },
   colPrecioP: { width: "17%", textAlign: "right" },
   colSubtotalP: { width: "18%", textAlign: "right" },
+  // Con bultos, sin precios
+  colDescB: { width: "52%" },
+  colCantB: { width: "12%", textAlign: "right" },
+  colUnidadB: { width: "12%", textAlign: "left" },
+  colBultosB: { width: "24%", textAlign: "right" },
+  // Con bultos y precios
+  colDescPB: { width: "30%" },
+  colCantPB: { width: "10%", textAlign: "right" },
+  colUnidadPB: { width: "10%", textAlign: "left" },
+  colBultosPB: { width: "18%", textAlign: "right" },
+  colPrecioPB: { width: "16%", textAlign: "right" },
+  colSubtotalPB: { width: "16%", textAlign: "right" },
+  bultosBox: {
+    marginTop: 10, padding: 8, borderWidth: 1, borderColor: "#1a1a1a",
+    alignSelf: "flex-start",
+  },
+  bultosText: { fontSize: 10.5, fontFamily: "Helvetica-Bold" },
   totalsBox: { marginTop: 12, alignItems: "flex-end" },
   totalFinalRow: {
     flexDirection: "row", width: 220, justifyContent: "space-between",
@@ -58,7 +76,10 @@ const styles = StyleSheet.create({
   },
 });
 
-type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario">;
+export type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario"> & {
+  /** Empaque del producto del catálogo; null/ausente = renglón libre sin dato. */
+  productos?: { unidades_por_bulto: number | null; tipo_bulto: string | null } | null;
+};
 
 export function RemitoPDF({
   remito,
@@ -75,6 +96,12 @@ export function RemitoPDF({
     (acc, it) => acc + (it.precio_unitario != null ? Number(it.cantidad) * Number(it.precio_unitario) : 0),
     0,
   );
+
+  const bultos = items.map((it) => calcularBultos(it.cantidad, it.productos?.unidades_por_bulto));
+  // Sin ningún renglón con empaque no se muestra la columna (serían todos guiones).
+  const conBultos = bultos.some((b) => b !== null);
+  const resumen = resumirBultos(bultos);
+  const bultosCelda = (i: number) => bultosTexto(bultos[i], items[i].productos?.tipo_bulto);
 
   return (
     <Document title={`REMITO N°${remito.numero} - ${empresa.nombre}`} author={empresa.nombre}>
@@ -116,24 +143,26 @@ export function RemitoPDF({
         {conPrecios ? (
           <View style={styles.table}>
             <View style={styles.tableHead}>
-              <Text style={[styles.th, styles.colDescP]}>Descripción</Text>
-              <Text style={[styles.th, styles.colCantP]}>Cantidad</Text>
-              <Text style={[styles.th, styles.colUnidadP]}>Unidad</Text>
-              <Text style={[styles.th, styles.colPrecioP]}>Precio unit.</Text>
-              <Text style={[styles.th, styles.colSubtotalP]}>Subtotal</Text>
+              <Text style={[styles.th, conBultos ? styles.colDescPB : styles.colDescP]}>Descripción</Text>
+              <Text style={[styles.th, conBultos ? styles.colCantPB : styles.colCantP]}>Cantidad</Text>
+              <Text style={[styles.th, conBultos ? styles.colUnidadPB : styles.colUnidadP]}>Unidad</Text>
+              {conBultos ? <Text style={[styles.th, styles.colBultosPB]}>Bultos</Text> : null}
+              <Text style={[styles.th, conBultos ? styles.colPrecioPB : styles.colPrecioP]}>Precio unit.</Text>
+              <Text style={[styles.th, conBultos ? styles.colSubtotalPB : styles.colSubtotalP]}>Subtotal</Text>
             </View>
             {items.map((it, i) => {
               const tienePrecio = it.precio_unitario != null;
               const subtotal = tienePrecio ? Number(it.cantidad) * Number(it.precio_unitario) : null;
               return (
                 <View style={styles.tableRow} key={i} wrap={false}>
-                  <Text style={[styles.td, styles.colDescP]}>{it.descripcion}</Text>
-                  <Text style={[styles.td, styles.colCantP]}>{formatNumber(it.cantidad)}</Text>
-                  <Text style={[styles.td, styles.colUnidadP]}>{it.unidad ?? "—"}</Text>
-                  <Text style={[styles.td, styles.colPrecioP]}>
+                  <Text style={[styles.td, conBultos ? styles.colDescPB : styles.colDescP]}>{it.descripcion}</Text>
+                  <Text style={[styles.td, conBultos ? styles.colCantPB : styles.colCantP]}>{formatNumber(it.cantidad)}</Text>
+                  <Text style={[styles.td, conBultos ? styles.colUnidadPB : styles.colUnidadP]}>{it.unidad ?? "—"}</Text>
+                  {conBultos ? <Text style={[styles.td, styles.colBultosPB]}>{bultosCelda(i)}</Text> : null}
+                  <Text style={[styles.td, conBultos ? styles.colPrecioPB : styles.colPrecioP]}>
                     {tienePrecio ? formatCurrency(it.precio_unitario) : "—"}
                   </Text>
-                  <Text style={[styles.td, styles.colSubtotalP]}>
+                  <Text style={[styles.td, conBultos ? styles.colSubtotalPB : styles.colSubtotalP]}>
                     {subtotal != null ? formatCurrency(subtotal) : "—"}
                   </Text>
                 </View>
@@ -143,19 +172,27 @@ export function RemitoPDF({
         ) : (
           <View style={styles.table}>
             <View style={styles.tableHead}>
-              <Text style={[styles.th, styles.colDesc]}>Descripción</Text>
-              <Text style={[styles.th, styles.colCant]}>Cantidad</Text>
-              <Text style={[styles.th, styles.colUnidad]}>Unidad</Text>
+              <Text style={[styles.th, conBultos ? styles.colDescB : styles.colDesc]}>Descripción</Text>
+              <Text style={[styles.th, conBultos ? styles.colCantB : styles.colCant]}>Cantidad</Text>
+              <Text style={[styles.th, conBultos ? styles.colUnidadB : styles.colUnidad]}>Unidad</Text>
+              {conBultos ? <Text style={[styles.th, styles.colBultosB]}>Bultos</Text> : null}
             </View>
             {items.map((it, i) => (
               <View style={styles.tableRow} key={i} wrap={false}>
-                <Text style={[styles.td, styles.colDesc]}>{it.descripcion}</Text>
-                <Text style={[styles.td, styles.colCant]}>{formatNumber(it.cantidad)}</Text>
-                <Text style={[styles.td, styles.colUnidad]}>{it.unidad ?? "—"}</Text>
+                <Text style={[styles.td, conBultos ? styles.colDescB : styles.colDesc]}>{it.descripcion}</Text>
+                <Text style={[styles.td, conBultos ? styles.colCantB : styles.colCant]}>{formatNumber(it.cantidad)}</Text>
+                <Text style={[styles.td, conBultos ? styles.colUnidadB : styles.colUnidad]}>{it.unidad ?? "—"}</Text>
+                {conBultos ? <Text style={[styles.td, styles.colBultosB]}>{bultosCelda(i)}</Text> : null}
               </View>
             ))}
           </View>
         )}
+
+        {conBultos ? (
+          <View style={styles.bultosBox} wrap={false}>
+            <Text style={styles.bultosText}>{resumenTexto(resumen)}</Text>
+          </View>
+        ) : null}
 
         {conPrecios ? (
           <View style={styles.totalsBox}>

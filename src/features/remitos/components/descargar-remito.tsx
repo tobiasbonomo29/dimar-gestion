@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEmpresa } from "@/components/empresa-provider";
-import type { Remito, RemitoItem } from "@/types/database";
+import type { Remito } from "@/types/database";
 import type { Empresa } from "@/features/unidades/queries";
-
-type RemitoItemLike = Pick<RemitoItem, "descripcion" | "cantidad" | "unidad" | "precio_unitario">;
+import type { RemitoItemLike } from "./remito-pdf";
 
 /** Genera y descarga el PDF de un remito. Carga @react-pdf/renderer on-demand. */
 export async function descargarRemitoPDF(remito: Remito, items: RemitoItemLike[], empresa: Empresa) {

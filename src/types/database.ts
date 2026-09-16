@@ -66,6 +66,9 @@ export type Producto = {
   unidad_medida: string;
   precio_base: number;
   stock: number;
+  /** Unidades por bulto (caja/bolsa). NULL = sin dato. */
+  unidades_por_bulto: number | null;
+  tipo_bulto: string | null;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -510,7 +513,7 @@ export interface Database {
       };
       productos: {
         Row: Row<Producto>;
-        Insert: Insert<Producto, "id" | "codigo" | "codigo_barras" | "activo" | "unidad_medida" | "precio_base" | "stock" | "created_at" | "updated_at">;
+        Insert: Insert<Producto, "id" | "codigo" | "codigo_barras" | "unidades_por_bulto" | "tipo_bulto" | "activo" | "unidad_medida" | "precio_base" | "stock" | "created_at" | "updated_at">;
         Update: Update<Producto>;
         Relationships: [];
       };

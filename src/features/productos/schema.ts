@@ -34,6 +34,12 @@ export const productoSchema = z.object({
   unidad_medida: z.string().trim().min(1).max(50).default("unidad"),
   precio_base: z.coerce.number().nonnegative("El precio base no puede ser negativo"),
   stock: z.coerce.number().default(0),
+  // Empaque: cuántas unidades entran en un bulto. Vacío = sin dato.
+  unidades_por_bulto: z
+    .union([z.coerce.number().int("Las unidades por bulto van sin decimales").positive("Tiene que ser mayor a 0"), z.literal(""), z.null()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : (v as number | null))),
+  tipo_bulto: optionalText,
   activo: z.boolean().default(true),
   variantes: z.array(varianteSchema).default([]),
 });
@@ -60,6 +66,8 @@ export type ProductoFormValues = {
   unidad_medida: string;
   precio_base: string;
   stock: string;
+  unidades_por_bulto?: string;
+  tipo_bulto?: string;
   activo: boolean;
   variantes: VarianteFormValues[];
 };
@@ -81,6 +89,8 @@ export const productoDefaults: ProductoFormValues = {
   unidad_medida: "unidad",
   precio_base: "0",
   stock: "0",
+  unidades_por_bulto: "",
+  tipo_bulto: "",
   activo: true,
   variantes: [],
 };

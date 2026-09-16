@@ -50,6 +50,8 @@ export async function createProducto(
       unidad_medida: producto.unidad_medida,
       precio_base: producto.precio_base,
       stock: producto.stock,
+      unidades_por_bulto: producto.unidades_por_bulto,
+      tipo_bulto: producto.tipo_bulto ?? null,
       activo: producto.activo,
     })
     .select("id")
@@ -101,6 +103,8 @@ export async function updateProducto(
       unidad_medida: producto.unidad_medida,
       precio_base: producto.precio_base,
       stock: producto.stock,
+      unidades_por_bulto: producto.unidades_por_bulto,
+      tipo_bulto: producto.tipo_bulto ?? null,
       activo: producto.activo,
     })
     .eq("id", id);

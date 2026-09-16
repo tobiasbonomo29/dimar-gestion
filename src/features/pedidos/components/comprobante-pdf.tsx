@@ -7,9 +7,11 @@ import {
 } from "@react-pdf/renderer";
 import { CONDICIONES_FISCALES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatComprobanteNumero } from "@/lib/format";
+import { bultosTexto, resumenTexto, resumirBultos } from "@/lib/bultos";
 import type { Comprobante, TipoComprobante } from "@/types/database";
 import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle } from "../queries";
+import { bultosDeItem } from "../bultos";
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 40, paddingVertical: 36, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -35,6 +37,23 @@ const styles = StyleSheet.create({
   colCant: { width: "14%", textAlign: "right" },
   colPrecio: { width: "20%", textAlign: "right" },
   colSubtotal: { width: "20%", textAlign: "right" },
+  // Factura con bultos
+  colDescB: { width: "34%" },
+  colCantB: { width: "11%", textAlign: "right" },
+  colBultosB: { width: "19%", textAlign: "right" },
+  colPrecioB: { width: "18%", textAlign: "right" },
+  colSubtotalB: { width: "18%", textAlign: "right" },
+  // Remito (sin precios)
+  colDescR: { width: "80%" },
+  colCantR: { width: "20%", textAlign: "right" },
+  colDescRB: { width: "58%" },
+  colCantRB: { width: "15%", textAlign: "right" },
+  colBultosRB: { width: "27%", textAlign: "right" },
+  bultosBox: {
+    marginTop: 10, padding: 8, borderWidth: 1, borderColor: "#1a1a1a",
+    alignSelf: "flex-start",
+  },
+  bultosText: { fontSize: 10.5, fontFamily: "Helvetica-Bold" },
   totalsBox: { marginTop: 12, alignItems: "flex-end" },
   totalsRow: { flexDirection: "row", width: 220, justifyContent: "space-between", paddingVertical: 2 },
   totalsLabel: { fontSize: 9.5, color: "#555" },
@@ -56,6 +75,7 @@ const styles = StyleSheet.create({
 
 const TITULOS: Record<TipoComprobante, string> = { remito: "REMITO", factura: "FACTURA" };
 
+
 export function ComprobantePDF({
   pedido,
   comprobante,
@@ -70,6 +90,21 @@ export function ComprobantePDF({
   const cliente = pedido.clientes;
   const esFactura = comprobante.tipo === "factura";
   const nroComprobante = formatComprobanteNumero(puntoVentaNumero, comprobante.numero);
+
+  const bultos = pedido.pedido_items.map(bultosDeItem);
+  // Si ningún renglón tiene dato de empaque (ej. pedido de medicamentos) no se
+  // muestra la columna: sería una columna llena de guiones.
+  const conBultos = bultos.some((b) => b !== null);
+  const resumen = resumirBultos(bultos);
+
+  const cols = esFactura
+    ? conBultos
+      ? { desc: styles.colDescB, cant: styles.colCantB, precio: styles.colPrecioB, subtotal: styles.colSubtotalB }
+      : { desc: styles.colDesc, cant: styles.colCant, precio: styles.colPrecio, subtotal: styles.colSubtotal }
+    : conBultos
+      ? { desc: styles.colDescRB, cant: styles.colCantRB, precio: styles.colPrecio, subtotal: styles.colSubtotal }
+      : { desc: styles.colDescR, cant: styles.colCantR, precio: styles.colPrecio, subtotal: styles.colSubtotal };
+  const colBultos = esFactura ? styles.colBultosB : styles.colBultosRB;
 
   return (
     <Document title={`${TITULOS[comprobante.tipo]} ${nroComprobante} - ${empresa.nombre}`} author={empresa.nombre}>
@@ -115,24 +150,32 @@ export function ComprobantePDF({
         {/* Ítems */}
         <View style={styles.table}>
           <View style={styles.tableHead}>
-            <Text style={[styles.th, styles.colDesc]}>Descripción</Text>
-            <Text style={[styles.th, styles.colCant]}>Cantidad</Text>
-            {esFactura ? <Text style={[styles.th, styles.colPrecio]}>Precio unit.</Text> : null}
-            {esFactura ? <Text style={[styles.th, styles.colSubtotal]}>Subtotal</Text> : null}
+            <Text style={[styles.th, cols.desc]}>Descripción</Text>
+            <Text style={[styles.th, cols.cant]}>Cantidad</Text>
+            {conBultos ? <Text style={[styles.th, colBultos]}>Bultos</Text> : null}
+            {esFactura ? <Text style={[styles.th, cols.precio]}>Precio unit.</Text> : null}
+            {esFactura ? <Text style={[styles.th, cols.subtotal]}>Subtotal</Text> : null}
           </View>
-          {pedido.pedido_items.map((it) => (
+          {pedido.pedido_items.map((it, i) => (
             <View style={styles.tableRow} key={it.id} wrap={false}>
-              <Text style={[styles.td, esFactura ? styles.colDesc : { width: "80%", padding: 6, fontSize: 9 }]}>
-                {it.descripcion}
-              </Text>
-              <Text style={[styles.td, esFactura ? styles.colCant : { width: "20%", padding: 6, fontSize: 9, textAlign: "right" }]}>
-                {it.cantidad}
-              </Text>
-              {esFactura ? <Text style={[styles.td, styles.colPrecio]}>{formatCurrency(it.precio_unitario)}</Text> : null}
-              {esFactura ? <Text style={[styles.td, styles.colSubtotal]}>{formatCurrency(it.subtotal)}</Text> : null}
+              <Text style={[styles.td, cols.desc]}>{it.descripcion}</Text>
+              <Text style={[styles.td, cols.cant]}>{it.cantidad}</Text>
+              {conBultos ? (
+                <Text style={[styles.td, colBultos]}>
+                  {bultosTexto(bultos[i], it.productos?.tipo_bulto)}
+                </Text>
+              ) : null}
+              {esFactura ? <Text style={[styles.td, cols.precio]}>{formatCurrency(it.precio_unitario)}</Text> : null}
+              {esFactura ? <Text style={[styles.td, cols.subtotal]}>{formatCurrency(it.subtotal)}</Text> : null}
             </View>
           ))}
         </View>
+
+        {conBultos ? (
+          <View style={styles.bultosBox} wrap={false}>
+            <Text style={styles.bultosText}>{resumenTexto(resumen)}</Text>
+          </View>
+        ) : null}
 
         {/* Totales solo en factura */}
         {esFactura ? (
