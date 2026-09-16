@@ -75,6 +75,15 @@ export function RemitoForm({ catalogo }: Props) {
     [catalogo],
   );
 
+  // Empaque por producto, para que el PDF recién generado ya calcule los bultos.
+  const empaquePorProducto = React.useMemo(
+    () =>
+      new Map(
+        catalogo.map((p) => [p.id, { unidades_por_bulto: p.unidades_por_bulto, tipo_bulto: p.tipo_bulto }]),
+      ),
+    [catalogo],
+  );
+
   const {
     register,
     handleSubmit,
@@ -127,6 +136,7 @@ export function RemitoForm({ catalogo }: Props) {
           cantidad: Number(it.cantidad) || 0,
           unidad: it.unidad?.trim() ? it.unidad.trim() : null,
           precio_unitario: it.precio_unitario?.trim() ? Number(it.precio_unitario) : null,
+          productos: it.producto_id ? empaquePorProducto.get(it.producto_id) ?? null : null,
         })),
         empresa,
       );

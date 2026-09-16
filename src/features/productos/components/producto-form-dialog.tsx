@@ -46,6 +46,8 @@ function toFormValues(p: ProductoConVariantes): ProductoFormValues {
     unidad_medida: p.unidad_medida,
     precio_base: String(p.precio_base),
     stock: String(p.stock),
+    unidades_por_bulto: p.unidades_por_bulto != null ? String(p.unidades_por_bulto) : "",
+    tipo_bulto: p.tipo_bulto ?? "",
     activo: p.activo,
     variantes: p.producto_variantes.map((v) => ({
       id: v.id,
@@ -154,6 +156,36 @@ export function ProductoFormDialog({ open, onOpenChange, producto, categorias }:
             <div className="grid gap-2">
               <Label htmlFor="stock">Stock</Label>
               <Input id="stock" type="number" step="1" {...register("stock")} />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="unidades_por_bulto">Unidades por bulto</Label>
+              <Input
+                id="unidades_por_bulto"
+                type="number"
+                step="1"
+                min="1"
+                placeholder="Ej: 24"
+                {...register("unidades_por_bulto")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Con esto la factura y el remito calculan los bultos solos.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="tipo_bulto">Tipo de bulto</Label>
+              <Input
+                id="tipo_bulto"
+                list="tipos-bulto"
+                placeholder="Caja, Bolsa..."
+                {...register("tipo_bulto")}
+              />
+              <datalist id="tipos-bulto">
+                <option value="Caja" />
+                <option value="Bolsa" />
+                <option value="Pack" />
+              </datalist>
             </div>
 
             <div className="flex items-center gap-2 pt-6">

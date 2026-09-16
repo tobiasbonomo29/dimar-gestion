@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Receipt, Download, Loader2 } from "lucide-react";
+import { FileText, Receipt, Download, Loader2, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,8 @@ import type { Comprobante, TipoComprobante, PuntoVenta } from "@/types/database"
 import type { Empresa } from "@/features/unidades/queries";
 import type { PedidoDetalle, ComprobanteConPV } from "../queries";
 import { generarComprobante } from "../actions";
+import { bultosDeItem } from "../bultos";
+import { resumirBultos } from "@/lib/bultos";
 
 async function descargarPDF(
   pedido: PedidoDetalle,
@@ -70,6 +72,10 @@ export function ComprobantesPanel({
   const pvSeleccionado = activos.find((p) => p.id === pvId);
   const anulado = pedido.estado === "cancelado";
   const sinPV = activos.length === 0;
+  const resumenBultos = React.useMemo(
+    () => resumirBultos(pedido.pedido_items.map(bultosDeItem)),
+    [pedido.pedido_items],
+  );
 
   async function handleGenerar(tipo: TipoComprobante) {
     if (!pvSeleccionado) {
@@ -172,6 +178,30 @@ export function ComprobantesPanel({
           factura → {ESTADOS_PEDIDO.facturado.label})
         </Label>
       </div>
+
+      {resumenBultos.total > 0 || resumenBultos.sinDato < pedido.pedido_items.length ? (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div>
+            <span className="font-semibold">
+              {resumenBultos.total} {resumenBultos.total === 1 ? "bulto" : "bultos"}
+            </span>
+            {resumenBultos.incompletos > 0 && (
+              <span className="text-muted-foreground">
+                {" "}· {resumenBultos.incompletos}{" "}
+                {resumenBultos.incompletos === 1 ? "incompleto" : "incompletos"}
+              </span>
+            )}
+            {resumenBultos.sinDato > 0 && (
+              <p className="text-xs text-amber-700 dark:text-amber-500">
+                {resumenBultos.sinDato}{" "}
+                {resumenBultos.sinDato === 1 ? "renglón no tiene" : "renglones no tienen"} unidades
+                por bulto cargadas: no se cuentan.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {!pedido.stock_descontado ? (
         <p className="text-xs text-muted-foreground">

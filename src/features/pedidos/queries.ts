@@ -24,9 +24,18 @@ export type ComprobanteConPV = Comprobante & {
 
 export type EntregaConItems = Entrega & { entrega_items: EntregaItem[] };
 
+/**
+ * Renglón con el dato de empaque para calcular bultos en factura/remito.
+ * Opcionales: solo getPedido los trae (join); otros armados no los tienen.
+ */
+export type PedidoItemConEmpaque = PedidoItem & {
+  productos?: { unidades_por_bulto: number | null; tipo_bulto: string | null } | null;
+  producto_variantes?: { cantidad_por_bulto: number | null } | null;
+};
+
 export type PedidoDetalle = Pedido & {
   clientes: Cliente | null;
-  pedido_items: PedidoItem[];
+  pedido_items: PedidoItemConEmpaque[];
   historial_estado: HistorialEstado[];
   comprobantes: ComprobanteConPV[];
   entregas: EntregaConItems[];
@@ -94,7 +103,7 @@ export async function getPedido(id: string): Promise<PedidoDetalle | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, clientes(*), pedido_items(*), historial_estado(*), comprobantes(*, puntos_venta(numero, nombre)), entregas(*, entrega_items(*))")
+    .select("*, clientes(*), pedido_items(*, productos(unidades_por_bulto, tipo_bulto), producto_variantes(cantidad_por_bulto)), historial_estado(*), comprobantes(*, puntos_venta(numero, nombre)), entregas(*, entrega_items(*))")
     .eq("id", id)
     .order("created_at", { referencedTable: "pedido_items", ascending: true })
     .order("fecha", { referencedTable: "historial_estado", ascending: false })
