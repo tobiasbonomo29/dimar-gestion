@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, FileSpreadsheet } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -42,7 +43,8 @@ export function IngresosPanel({
   fechaDefault,
 }: {
   ingresos: FarmIngreso[];
-  tipo: FarmTipoIngreso;
+  /** "todos" = vista unificada (ventas + otros), cada fila una sola vez. */
+  tipo: FarmTipoIngreso | "todos";
   /** Primer día del período: fecha por defecto al cargar uno nuevo. */
   fechaDefault: string;
 }) {
@@ -50,6 +52,10 @@ export function IngresosPanel({
   const [open, setOpen] = React.useState(false);
   const [enEdicion, setEnEdicion] = React.useState<FarmIngreso | null>(null);
   const [aBorrar, setABorrar] = React.useState<FarmIngreso | null>(null);
+  // Tipo con el que se abre el formulario: el de la fila en edición, o el
+  // elegido al crear (en la vista unificada hay un botón por tipo).
+  const [tipoForm, setTipoForm] = React.useState<FarmTipoIngreso>(tipo === "todos" ? "venta" : tipo);
+  const esTodos = tipo === "todos";
   const esVenta = tipo === "venta";
 
   const totales = React.useMemo(() => {
@@ -63,12 +69,14 @@ export function IngresosPanel({
     return t;
   }, [ingresos]);
 
-  function abrirNuevo() {
+  function abrirNuevo(t: FarmTipoIngreso) {
+    setTipoForm(t);
     setEnEdicion(null);
     setOpen(true);
   }
 
   function abrirEdicion(i: FarmIngreso) {
+    setTipoForm(i.tipo);
     setEnEdicion(i);
     setOpen(true);
   }
@@ -77,6 +85,7 @@ export function IngresosPanel({
     exportToExcel(
       ingresos.map((i) => ({
         Fecha: formatDate(i.fecha),
+        ...(esTodos ? { Tipo: i.tipo === "venta" ? "Venta" : "Otro ingreso" } : {}),
         Semana: i.semana ?? "",
         Concepto: i.concepto,
         Efectivo: Number(i.efectivo),
@@ -85,8 +94,8 @@ export function IngresosPanel({
         Total: Number(i.total),
         Nota: i.nota ?? "",
       })),
-      esVenta ? "ingresos-por-venta" : "otros-ingresos",
-      esVenta ? "Ingresos por venta" : "Otros ingresos",
+      esTodos ? "todos-los-ingresos" : esVenta ? "ingresos-por-venta" : "otros-ingresos",
+      esTodos ? "Todos los ingresos" : esVenta ? "Ingresos por venta" : "Otros ingresos",
     );
   }
 
@@ -106,26 +115,41 @@ export function IngresosPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {esVenta
-            ? "Ventas del mes con el detalle de cómo entró la plata."
-            : "Ingresos que no son venta de mostrador: droguería, notas de crédito, convenios."}
+          {esTodos
+            ? "Todo lo que entró en el mes, ventas y otros ingresos juntos, tal como se cargó."
+            : esVenta
+              ? "Ventas del mes con el detalle de cómo entró la plata."
+              : "Ingresos que no son venta de mostrador: droguería, notas de crédito, convenios."}
         </p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={descargarExcel} disabled={ingresos.length === 0}>
             <FileSpreadsheet className="h-4 w-4" />
             Excel
           </Button>
-          <Button onClick={abrirNuevo}>
-            <Plus className="h-4 w-4" />
-            Nuevo ingreso
-          </Button>
+          {esTodos ? (
+            <>
+              <Button variant="outline" onClick={() => abrirNuevo("otro")}>
+                <Plus className="h-4 w-4" />
+                Otro ingreso
+              </Button>
+              <Button onClick={() => abrirNuevo("venta")}>
+                <Plus className="h-4 w-4" />
+                Nueva venta
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => abrirNuevo(tipo)}>
+              <Plus className="h-4 w-4" />
+              Nuevo ingreso
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Total label="Efectivo" monto={totales.efectivo} />
         <Total label="Banco" monto={totales.banco} />
-        <Total label={esVenta ? "Obra social" : "Droguería / OS"} monto={totales.obraSocial} />
+        <Total label={esTodos ? "Obra social / Droguería" : esVenta ? "Obra social" : "Droguería / OS"} monto={totales.obraSocial} />
         <Total label="Total del mes" monto={totales.total} destacado />
       </div>
 
@@ -134,11 +158,14 @@ export function IngresosPanel({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[100px]">Fecha</TableHead>
+              {esTodos && <TableHead className="w-[100px]">Tipo</TableHead>}
               <TableHead className="w-[110px]">Semana</TableHead>
               <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Efectivo</TableHead>
               <TableHead className="text-right">Banco</TableHead>
-              <TableHead className="text-right">{esVenta ? "Obra social" : "Droguería"}</TableHead>
+              <TableHead className="text-right">
+                {esTodos ? "OS / Droguería" : esVenta ? "Obra social" : "Droguería"}
+              </TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="w-[88px]" />
             </TableRow>
@@ -146,7 +173,7 @@ export function IngresosPanel({
           <TableBody>
             {ingresos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={esTodos ? 9 : 8} className="h-24 text-center text-muted-foreground">
                   Sin ingresos cargados en este mes.
                 </TableCell>
               </TableRow>
@@ -154,6 +181,13 @@ export function IngresosPanel({
               ingresos.map((i) => (
                 <TableRow key={i.id}>
                   <TableCell className="text-muted-foreground">{formatDate(i.fecha)}</TableCell>
+                  {esTodos && (
+                    <TableCell>
+                      <Badge className={i.tipo === "venta" ? "" : "text-muted-foreground"}>
+                        {i.tipo === "venta" ? "Venta" : "Otro"}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">{i.semana ?? "—"}</TableCell>
                   <TableCell className="font-medium">{i.concepto}</TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
@@ -200,7 +234,7 @@ export function IngresosPanel({
       <IngresoFormDialog
         open={open}
         onOpenChange={setOpen}
-        tipo={tipo}
+        tipo={tipoForm}
         fechaDefault={fechaDefault}
         ingreso={enEdicion}
       />

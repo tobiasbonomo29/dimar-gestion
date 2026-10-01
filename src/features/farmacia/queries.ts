@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
+  FarmCategoriaEgreso,
   FarmCostoFijo,
   FarmEerr,
   FarmEgreso,
@@ -65,6 +66,20 @@ export async function getProveedores(): Promise<FarmProveedor[]> {
     .select("*")
     .order("nombre", { ascending: true });
   if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Categorías de egreso creadas por el usuario. Si la tabla todavía no existe
+ * (migración 0035 sin correr) devuelve vacío en vez de romper la página.
+ */
+export async function getCategoriasEgreso(): Promise<FarmCategoriaEgreso[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("farm_categorias_egreso")
+    .select("*")
+    .order("nombre", { ascending: true });
+  if (error) return [];
   return data ?? [];
 }
 

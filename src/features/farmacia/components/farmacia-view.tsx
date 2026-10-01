@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
+  FarmCategoriaEgreso,
   FarmCostoFijo,
   FarmEerr,
   FarmEgreso,
@@ -33,6 +35,7 @@ export function FarmaciaView({
   empleados,
   costosFijos,
   proveedores,
+  categoriasEgreso,
   eerrConfig,
 }: {
   periodo: string;
@@ -47,9 +50,19 @@ export function FarmaciaView({
   empleados: FarmEmpleado[];
   costosFijos: FarmCostoFijo[];
   proveedores: FarmProveedor[];
+  categoriasEgreso: FarmCategoriaEgreso[];
   eerrConfig: FarmEerr | null;
 }) {
   const fijosDelMes = egresos.filter((e) => e.rubro === "fijo").length;
+  // Vista unificada: ventas y otros son filas distintas de farm_ingresos, así
+  // que unirlas no duplica nada. Se ordena igual que la query (fecha, alta).
+  const todosLosIngresos = React.useMemo(
+    () =>
+      [...ventas, ...otros].sort(
+        (a, b) => a.fecha.localeCompare(b.fecha) || a.created_at.localeCompare(b.created_at),
+      ),
+    [ventas, otros],
+  );
 
   return (
     <div className="space-y-4">
@@ -59,6 +72,7 @@ export function FarmaciaView({
         <TabsList className="flex-wrap">
           <TabsTrigger value="tablero">Tablero</TabsTrigger>
           <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
+          <TabsTrigger value="ingresos">Todos los ingresos</TabsTrigger>
           <TabsTrigger value="ventas">Ingresos por venta</TabsTrigger>
           <TabsTrigger value="otros">Otros ingresos</TabsTrigger>
           <TabsTrigger value="egresos">Egresos</TabsTrigger>
@@ -76,6 +90,10 @@ export function FarmaciaView({
           <EerrPanel estado={estado} config={eerrConfig} />
         </TabsContent>
 
+        <TabsContent value="ingresos">
+          <IngresosPanel ingresos={todosLosIngresos} tipo="todos" fechaDefault={fechaDefault} />
+        </TabsContent>
+
         <TabsContent value="ventas">
           <IngresosPanel ingresos={ventas} tipo="venta" fechaDefault={fechaDefault} />
         </TabsContent>
@@ -85,7 +103,12 @@ export function FarmaciaView({
         </TabsContent>
 
         <TabsContent value="egresos">
-          <EgresosPanel egresos={egresos} proveedores={proveedores} fechaDefault={fechaDefault} />
+          <EgresosPanel
+            egresos={egresos}
+            proveedores={proveedores}
+            categorias={categoriasEgreso}
+            fechaDefault={fechaDefault}
+          />
         </TabsContent>
 
         <TabsContent value="sueldos">

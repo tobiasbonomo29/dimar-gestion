@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/clientes/actions";
 import { rangoPeriodo } from "./periodo";
+import type { FarmCategoriaEgreso } from "@/types/database";
 import {
+  categoriaEgresoSchema,
   costoFijoSchema,
   eerrSchema,
   egresoSchema,
@@ -12,6 +14,7 @@ import {
   ingresoSchema,
   proveedorSchema,
   sueldoSchema,
+  type CategoriaEgresoFormValues,
   type CostoFijoFormValues,
   type EerrFormValues,
   type EgresoFormValues,
@@ -139,6 +142,32 @@ export async function deleteEgreso(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message };
   refresh();
   return { ok: true, data: undefined };
+}
+
+// -----------------------------------------------------------------------------
+// Categorías de egreso (las crea el usuario; cada una cae en un rubro fijo)
+// -----------------------------------------------------------------------------
+
+export async function createCategoriaEgreso(
+  values: CategoriaEgresoFormValues,
+): Promise<ActionResult<FarmCategoriaEgreso>> {
+  const parsed = categoriaEgresoSchema.safeParse(values);
+  if (!parsed.success) return { ok: false, error: primerError(parsed.error) };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("farm_categorias_egreso")
+    .insert(parsed.data)
+    .select("*")
+    .single();
+  if (error) {
+    // Índice único por (unidad, nombre en minúsculas).
+    if (error.code === "23505") return { ok: false, error: "Ya existe una categoría con ese nombre" };
+    return { ok: false, error: error.message };
+  }
+
+  refresh();
+  return { ok: true, data };
 }
 
 // -----------------------------------------------------------------------------

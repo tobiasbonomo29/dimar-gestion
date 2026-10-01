@@ -385,6 +385,14 @@ export type FarmRubroEgreso =
 
 export type FarmModoCmv = "porcentaje" | "monto" | "mercaderia";
 
+export type FarmCategoriaEgreso = {
+  id: string;
+  unidad_id: string;
+  nombre: string;
+  rubro: FarmRubroEgreso;
+  created_at: string;
+};
+
 export type FarmProveedor = {
   id: string;
   unidad_id: string;
@@ -683,6 +691,12 @@ export interface Database {
         Row: Row<FarmProveedor>;
         Insert: Insert<FarmProveedor, "id" | "unidad_id" | "activo" | "created_at" | "updated_at">;
         Update: Update<FarmProveedor>;
+        Relationships: [];
+      };
+      farm_categorias_egreso: {
+        Row: Row<FarmCategoriaEgreso>;
+        Insert: Insert<FarmCategoriaEgreso, "id" | "unidad_id" | "created_at">;
+        Update: Update<FarmCategoriaEgreso>;
         Relationships: [];
       };
       farm_ingresos: {

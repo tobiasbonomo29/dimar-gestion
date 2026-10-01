@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,22 +22,34 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { MEDIOS_PAGO, FARM_RUBROS_EGRESO, FARM_CATEGORIAS_EGRESO } from "@/lib/constants";
-import type { FarmEgreso, FarmProveedor, FarmRubroEgreso } from "@/types/database";
-import { createEgreso, updateEgreso } from "../actions";
+import type {
+  FarmCategoriaEgreso,
+  FarmEgreso,
+  FarmProveedor,
+  FarmRubroEgreso,
+} from "@/types/database";
+import { createCategoriaEgreso, createEgreso, updateEgreso } from "../actions";
 import { egresoDefaults, type EgresoFormValues } from "../schema";
 
 /** Valor del select cuando el proveedor se escribe a mano en vez de elegirlo. */
 const OTRO = "__otro__";
+/** Valor del select de rubro que abre el alta de una categoría nueva. */
+const NUEVA_CATEGORIA = "__nueva__";
+/** Prefijo de los valores del select de rubro que son categorías del usuario. */
+const CAT = "cat:";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proveedores: FarmProveedor[];
+  /** Categorías creadas por el usuario; cada una completa rubro + categoría. */
+  categorias: FarmCategoriaEgreso[];
   fechaDefault: string;
   rubroDefault?: FarmRubroEgreso;
   egreso?: FarmEgreso | null;
@@ -64,6 +76,7 @@ export function EgresoFormDialog({
   open,
   onOpenChange,
   proveedores,
+  categorias,
   fechaDefault,
   rubroDefault = "variable",
   egreso,
@@ -85,8 +98,70 @@ export function EgresoFormDialog({
     reset(egreso ? toFormValues(egreso) : { ...egresoDefaults(rubroDefault), fecha: fechaDefault });
   }, [open, egreso, rubroDefault, fechaDefault, reset]);
 
+  // Alta de categoría nueva (mini formulario dentro del diálogo). Las recién
+  // creadas se guardan acá hasta que el refresh las traiga en `categorias`.
+  const [creadas, setCreadas] = React.useState<FarmCategoriaEgreso[]>([]);
+  const [nueva, setNueva] = React.useState(false);
+  const [nuevoNombre, setNuevoNombre] = React.useState("");
+  const [nuevoRubro, setNuevoRubro] = React.useState<FarmRubroEgreso>("variable");
+  const [guardandoCat, setGuardandoCat] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open) setNueva(false);
+  }, [open]);
+
+  const listaCategorias = React.useMemo(() => {
+    const ids = new Set(categorias.map((c) => c.id));
+    return [...categorias, ...creadas.filter((c) => !ids.has(c.id))].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre),
+    );
+  }, [categorias, creadas]);
+
   const rubro = watch("rubro");
+  const categoria = watch("categoria");
   const medioPago = watch("medio_pago");
+
+  // Si la categoría cargada es una del usuario (y del mismo rubro), el select
+  // la muestra a ella; si no, muestra el rubro solo.
+  const categoriaElegida = listaCategorias.find(
+    (c) => c.rubro === rubro && c.nombre.toLowerCase() === (categoria ?? "").trim().toLowerCase(),
+  );
+  const valorRubro = categoriaElegida ? CAT + categoriaElegida.id : rubro;
+
+  function elegirRubro(v: string) {
+    if (v === NUEVA_CATEGORIA) {
+      setNuevoNombre("");
+      setNuevoRubro(rubro);
+      setNueva(true);
+      return;
+    }
+    if (v.startsWith(CAT)) {
+      const c = listaCategorias.find((x) => CAT + x.id === v);
+      if (!c) return;
+      setValue("rubro", c.rubro);
+      setValue("categoria", c.nombre);
+      return;
+    }
+    setValue("rubro", v as FarmRubroEgreso);
+    // Al volver a un rubro pelado, la categoría del usuario deja de aplicar.
+    if (categoriaElegida) setValue("categoria", "");
+  }
+
+  async function guardarCategoria() {
+    setGuardandoCat(true);
+    const result = await createCategoriaEgreso({ nombre: nuevoNombre, rubro: nuevoRubro });
+    setGuardandoCat(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setCreadas((prev) => [...prev, result.data]);
+    setValue("rubro", result.data.rubro);
+    setValue("categoria", result.data.nombre);
+    setNueva(false);
+    toast.success(`Categoría "${result.data.nombre}" creada`);
+    router.refresh();
+  }
   const proveedorId = watch("proveedor_id");
   const pagado = watch("pagado");
 
@@ -128,7 +203,7 @@ export function EgresoFormDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="rubro">Rubro *</Label>
-            <Select value={rubro} onValueChange={(v) => setValue("rubro", v as FarmRubroEgreso)}>
+            <Select value={valorRubro} onValueChange={elegirRubro}>
               <SelectTrigger id="rubro">
                 <SelectValue />
               </SelectTrigger>
@@ -138,11 +213,84 @@ export function EgresoFormDialog({
                     {label}
                   </SelectItem>
                 ))}
+                {listaCategorias.length > 0 && (
+                  <SelectGroup>
+                    <div className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                      Mis categorías
+                    </div>
+                    {listaCategorias.map((c) => (
+                      <SelectItem key={c.id} value={CAT + c.id}>
+                        {c.nombre}{" "}
+                        <span className="text-muted-foreground">
+                          · {FARM_RUBROS_EGRESO[c.rubro].label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                <SelectItem value={NUEVA_CATEGORIA}>+ Nueva categoría…</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               Va a: {FARM_RUBROS_EGRESO[rubro].linea}
             </p>
+
+            {nueva && (
+              <div className="grid gap-3 rounded-lg border p-3">
+                <p className="text-xs font-medium text-muted-foreground">Nueva categoría</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="nueva-categoria" className="text-xs">Nombre</Label>
+                    <Input
+                      id="nueva-categoria"
+                      autoFocus
+                      placeholder="Ej: Delivery"
+                      value={nuevoNombre}
+                      onChange={(e) => setNuevoNombre(e.target.value)}
+                      onKeyDown={(e) => {
+                        // Enter crea la categoría, no manda el egreso.
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (nuevoNombre.trim()) guardarCategoria();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="nueva-categoria-rubro" className="text-xs">Cae en el rubro</Label>
+                    <Select value={nuevoRubro} onValueChange={(v) => setNuevoRubro(v as FarmRubroEgreso)}>
+                      <SelectTrigger id="nueva-categoria-rubro">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(FARM_RUBROS_EGRESO).map(([value, { label }]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  En el estado de resultados suma en: {FARM_RUBROS_EGRESO[nuevoRubro].linea}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setNueva(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={guardarCategoria}
+                    disabled={guardandoCat || !nuevoNombre.trim()}
+                  >
+                    {guardandoCat ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Crear categoría
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-2">
@@ -200,9 +348,11 @@ export function EgresoFormDialog({
                 {...register("categoria")}
               />
               <datalist id="farm-categorias-egreso">
-                {FARM_CATEGORIAS_EGRESO.map((c) => (
-                  <option key={c} value={c} />
-                ))}
+                {[...new Set([...listaCategorias.map((c) => c.nombre), ...FARM_CATEGORIAS_EGRESO])].map(
+                  (c) => (
+                    <option key={c} value={c} />
+                  ),
+                )}
               </datalist>
             </div>
             <div className="grid gap-2">

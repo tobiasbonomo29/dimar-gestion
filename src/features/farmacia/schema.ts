@@ -109,6 +109,13 @@ export const egresoSchema = z.object({
   nota: opt(1000),
 });
 
+export const categoriaEgresoSchema = z.object({
+  nombre: z.string().trim().min(1, "Ingresá un nombre").max(80),
+  rubro: z.enum(RUBROS),
+});
+
+export type CategoriaEgresoFormValues = z.input<typeof categoriaEgresoSchema>;
+
 export type EgresoFormValues = {
   rubro: (typeof RUBROS)[number];
   fecha: string;

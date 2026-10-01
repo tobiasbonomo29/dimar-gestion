@@ -27,7 +27,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { FARM_RUBROS_EGRESO, MEDIOS_PAGO } from "@/lib/constants";
 import { exportToExcel } from "@/lib/export-excel";
-import type { FarmEgreso, FarmProveedor, FarmRubroEgreso } from "@/types/database";
+import type {
+  FarmCategoriaEgreso,
+  FarmEgreso,
+  FarmProveedor,
+  FarmRubroEgreso,
+} from "@/types/database";
 import { deleteEgreso } from "../actions";
 import { EgresoFormDialog } from "./egreso-form-dialog";
 
@@ -36,10 +41,12 @@ const TODOS = "__todos__";
 export function EgresosPanel({
   egresos,
   proveedores,
+  categorias,
   fechaDefault,
 }: {
   egresos: FarmEgreso[];
   proveedores: FarmProveedor[];
+  categorias: FarmCategoriaEgreso[];
   fechaDefault: string;
 }) {
   const router = useRouter();
@@ -239,6 +246,7 @@ export function EgresosPanel({
         open={open}
         onOpenChange={setOpen}
         proveedores={proveedores}
+        categorias={categorias}
         fechaDefault={fechaDefault}
         rubroDefault={filtro === TODOS ? "variable" : (filtro as FarmRubroEgreso)}
         egreso={enEdicion}

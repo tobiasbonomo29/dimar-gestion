@@ -1,4 +1,5 @@
 import {
+  getCategoriasEgreso,
   getCostosFijos,
   getEerrConfig,
   getEgresos,
@@ -35,6 +36,7 @@ export default async function FarmaciaPage({
     costosFijos,
     proveedores,
     eerrConfig,
+    categoriasEgreso,
   ] = await Promise.all([
     getEstadoResultados(periodo),
     getEvolucion(periodo),
@@ -46,6 +48,7 @@ export default async function FarmaciaPage({
     getCostosFijos(),
     getProveedores(),
     getEerrConfig(periodo),
+    getCategoriasEgreso(),
   ]);
 
   return (
@@ -70,6 +73,7 @@ export default async function FarmaciaPage({
         empleados={empleados}
         costosFijos={costosFijos}
         proveedores={proveedores}
+        categoriasEgreso={categoriasEgreso}
         eerrConfig={eerrConfig}
       />
     </div>
