@@ -11,6 +11,7 @@ import {
   getReposicion,
 } from "@/features/admin/queries";
 import { getVendedores } from "@/features/vendedores/queries";
+import { getAniosReporte } from "@/features/admin/reportes/queries";
 import { AdminView } from "@/features/admin/components/admin-view";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default async function AdministracionPage({
     ventasProducto,
     stockInsumos,
     reposicion,
+    anios,
   ] = await Promise.all([
     getEstadoResultados(desde, hasta),
     getEgresos("compra"),
@@ -57,6 +59,7 @@ export default async function AdministracionPage({
     getVentasPorProductoMensual(desde, hasta),
     getStockInsumos(),
     getReposicion(desde, hasta),
+    getAniosReporte(),
   ]);
 
   return (
@@ -82,6 +85,7 @@ export default async function AdministracionPage({
         ventasProducto={ventasProducto}
         stockInsumos={stockInsumos}
         reposicion={reposicion}
+        anios={anios}
       />
     </div>
   );

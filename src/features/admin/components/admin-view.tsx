@@ -26,6 +26,7 @@ import { ReposicionPanel } from "./reposicion-panel";
 import { EstadisticasPanel } from "./estadisticas-panel";
 import { AportesPanel } from "./aportes-panel";
 import { LiquidacionPanel } from "./liquidacion-panel";
+import { ReportesPanel } from "../reportes/reportes-panel";
 
 export function AdminView({
   estado,
@@ -41,6 +42,7 @@ export function AdminView({
   ventasProducto,
   stockInsumos,
   reposicion,
+  anios,
 }: {
   estado: EstadoResultados;
   compras: Egreso[];
@@ -55,6 +57,7 @@ export function AdminView({
   ventasProducto: VentasPorProducto;
   stockInsumos: StockInsumos;
   reposicion: Reposicion;
+  anios: number[];
 }) {
   return (
     <div className="space-y-4">
@@ -65,6 +68,7 @@ export function AdminView({
 
       <Tabs defaultValue="resultados" className="space-y-4">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="reportes">Reportes</TabsTrigger>
           <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
           <TabsTrigger value="facturacion">Facturación</TabsTrigger>
           <TabsTrigger value="cobrar">Por cobrar</TabsTrigger>
@@ -76,6 +80,10 @@ export function AdminView({
           <TabsTrigger value="compras">Compras</TabsTrigger>
           <TabsTrigger value="erogaciones">Erogaciones</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="reportes">
+          <ReportesPanel anios={anios} />
+        </TabsContent>
 
         <TabsContent value="resultados" className="space-y-4">
           <EstadoResultadosPanel estado={estado} />
