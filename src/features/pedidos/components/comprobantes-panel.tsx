@@ -89,9 +89,17 @@ export function ComprobantesPanel({
         toast.error(result.error);
         return;
       }
-      const nro = formatComprobanteNumero(pvSeleccionado.numero, result.data.comprobante.numero);
-      toast.success(`${TIPOS_COMPROBANTE[tipo]} N° ${nro} generado`);
-      await descargarPDF(pedido, result.data.comprobante, empresa, pvSeleccionado.numero);
+      const { comprobante, existente } = result.data;
+      // Una factura ya emitida conserva su punto de venta original.
+      const pvNumero =
+        puntosVenta.find((p) => p.id === comprobante.punto_venta_id)?.numero ?? pvSeleccionado.numero;
+      const nro = formatComprobanteNumero(pvNumero, comprobante.numero);
+      toast.success(
+        existente
+          ? `${TIPOS_COMPROBANTE[tipo]} N° ${nro} ya emitida: se descarga la misma`
+          : `${TIPOS_COMPROBANTE[tipo]} N° ${nro} generado`,
+      );
+      await descargarPDF(pedido, comprobante, empresa, pvNumero);
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -162,7 +170,7 @@ export function ComprobantesPanel({
           disabled={loading !== null || anulado || sinPV}
         >
           {loading === "factura" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
-          Factura
+          {pedido.comprobantes.some((c) => c.tipo === "factura") ? "Descargar factura" : "Factura"}
         </Button>
       </div>
 

@@ -128,14 +128,16 @@ export async function cambiarEstadoPedido(
  *  - si `avanzarEstado` es true, avanza el estado (factura→facturado,
  *    remito→despachado) cuando corresponde. Por defecto no mueve el pedido:
  *    el movimiento en el Kanban queda en manos del usuario.
- * Devuelve el comprobante creado para poder generar el PDF.
+ * Cada pedido tiene una única factura: si ya existe, se devuelve esa misma
+ * (`existente: true`) para volver a descargarla, sin consumir otro número.
+ * Devuelve el comprobante para poder generar el PDF.
  */
 export async function generarComprobante(
   pedidoId: string,
   tipo: TipoComprobante,
   puntoVentaId: string,
   avanzarEstado = false,
-): Promise<ActionResult<{ comprobante: Comprobante }>> {
+): Promise<ActionResult<{ comprobante: Comprobante; existente: boolean }>> {
   if (!puntoVentaId) return { ok: false, error: "Elegí un punto de venta." };
   const supabase = await createClient();
 
@@ -148,6 +150,22 @@ export async function generarComprobante(
   if (!pedido) return { ok: false, error: "El pedido no existe" };
   if (pedido.estado === "cancelado") {
     return { ok: false, error: "No se puede generar un comprobante de un pedido cancelado." };
+  }
+
+  // Factura única por pedido: si ya se emitió, se reutiliza.
+  if (tipo === "factura") {
+    const { data: existente, error: exErr } = await supabase
+      .from("comprobantes")
+      .select("*")
+      .eq("pedido_id", pedidoId)
+      .eq("tipo", "factura")
+      .order("numero", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (exErr) return { ok: false, error: exErr.message };
+    if (existente) {
+      return { ok: true, data: { comprobante: existente as Comprobante, existente: true } };
+    }
   }
 
   // Número correlativo por (punto de venta, tipo).
@@ -192,7 +210,7 @@ export async function generarComprobante(
 
   revalidatePath("/pedidos");
   revalidatePath(`/pedidos/${pedidoId}`);
-  return { ok: true, data: { comprobante: comprobante as Comprobante } };
+  return { ok: true, data: { comprobante: comprobante as Comprobante, existente: false } };
 }
 
 export type ItemEscaneado = {
