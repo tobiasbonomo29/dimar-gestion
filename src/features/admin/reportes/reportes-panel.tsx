@@ -217,7 +217,7 @@ export function ReportesPanel({ anios }: { anios: number[] }) {
                   <CardHeader>
                     <CardTitle className="text-base">Estado de resultados</CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      Importes con IVA incluido (criterio de caja). Ventas = pedidos facturados por fecha de carga.
+                      Importes con IVA incluido (criterio de caja). Ventas = pedidos facturados por fecha de facturación.
                     </p>
                   </CardHeader>
                   <CardContent>

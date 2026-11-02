@@ -99,7 +99,7 @@ export function CuentaCorrientePDF({ cuenta }: { cuenta: CuentaCorriente }) {
           <View style={styles.table}>
             <View style={styles.tableHead}>
               <Text style={[styles.th, styles.colNumero]}>Pedido</Text>
-              <Text style={[styles.th, styles.colFecha]}>Fecha</Text>
+              <Text style={[styles.th, styles.colFecha]}>Facturado</Text>
               <Text style={[styles.th, styles.colEstado]}>Estado</Text>
               <Text style={[styles.th, styles.colTotal]}>Total</Text>
               <Text style={[styles.th, styles.colPagado]}>Pagado</Text>
@@ -108,7 +108,7 @@ export function CuentaCorrientePDF({ cuenta }: { cuenta: CuentaCorriente }) {
             {pendientes.map((p) => (
               <View style={styles.tableRow} key={p.id} wrap={false}>
                 <Text style={[styles.td, styles.colNumero]}>#{p.numero}</Text>
-                <Text style={[styles.td, styles.colFecha]}>{formatDate(p.fecha_creacion)}</Text>
+                <Text style={[styles.td, styles.colFecha]}>{formatDate(p.fecha_facturacion ?? p.fecha_creacion)}</Text>
                 <Text style={[styles.td, styles.colEstado]}>{ESTADOS_PEDIDO[p.estado].label}</Text>
                 <Text style={[styles.td, styles.colTotal]}>{formatCurrency(p.total)}</Text>
                 <Text style={[styles.td, styles.colPagado]}>{formatCurrency(p.pagado)}</Text>

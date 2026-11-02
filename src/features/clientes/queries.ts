@@ -94,7 +94,7 @@ export async function getClientesConSaldo(search?: string): Promise<ClienteConSa
 
 export type PedidoConSaldo = Pick<
   Pedido,
-  "id" | "numero" | "fecha_creacion" | "estado" | "total"
+  "id" | "numero" | "fecha_creacion" | "fecha_facturacion" | "estado" | "total"
 > & {
   pagado: number;
   pendiente: number;
@@ -122,10 +122,11 @@ export async function getCuentaCorriente(clienteId: string): Promise<CuentaCorri
     supabase.from("clientes").select("*").eq("id", clienteId).maybeSingle(),
     supabase
       .from("pedidos")
-      .select("id, numero, fecha_creacion, estado, total")
+      .select("id, numero, fecha_creacion, fecha_facturacion, estado, total")
       .eq("cliente_id", clienteId)
       .in("estado", ESTADOS_GENERAN_DEUDA)
-      .order("fecha_creacion", { ascending: true }),
+      .order("fecha_facturacion", { ascending: true })
+      .order("numero", { ascending: true }),
     supabase
       .from("pagos")
       .select("*")

@@ -24,7 +24,7 @@ export function descargarReporteExcel(r: ReporteGerencial, archivo: string) {
         { Concepto: "RESULTADO", Importe: eerr.resultado },
         { Concepto: "Margen sobre ventas", Importe: p4(eerr.margen) },
         { Concepto: "Aportes de capital (fuera del resultado)", Importe: eerr.aportes },
-        { Concepto: "Criterio", Importe: "Importes con IVA incluido; ventas = pedidos facturados por fecha de carga" },
+        { Concepto: "Criterio", Importe: "Importes con IVA incluido; ventas = pedidos facturados por fecha de facturación" },
       ],
     },
     {

@@ -43,6 +43,12 @@ export function formatNumber(value: number | string | null | undefined): string 
 /** Formatea una fecha: 01/07/2026 */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return "—";
+  // Fecha sin hora (columna date, "YYYY-MM-DD"): se muestra tal cual. Pasarla
+  // por Date la interpreta en UTC y en Argentina aparece un día antes.
+  if (typeof value === "string") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  }
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return dateFormatter.format(d);

@@ -143,7 +143,7 @@ export function ReporteGerencialPDF({ r, empresa }: { r: ReporteGerencial; empre
         {Header}
         <Text style={s.h2}>1. Estado de resultados</Text>
         <Text style={s.h2sub}>
-          Importes con IVA incluido (criterio de caja). Ventas = pedidos facturados por fecha de carga.
+          Importes con IVA incluido (criterio de caja). Ventas = pedidos facturados por fecha de facturación.
         </Text>
 
         <Linea label="Ventas (con IVA)" valor={$(eerr.ventasBrutas)} />

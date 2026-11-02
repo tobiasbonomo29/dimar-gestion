@@ -2,12 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
 import type { Egreso, TipoEgreso, AporteCapital, Vendedor, EstadoPedido } from "@/types/database";
 
-function hastaExclusivo(hasta: string): string {
-  const d = new Date(hasta + "T00:00:00");
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
 /** Lista de egresos (compras/erogaciones), opcionalmente filtrada por tipo. */
 export async function getEgresos(tipo?: TipoEgreso): Promise<Egreso[]> {
   const supabase = await createClient();
@@ -63,7 +57,7 @@ function mesLabel(key: string): string {
 
 /**
  * Estado de resultados de la unidad actual entre dos fechas (inclusive).
- * Ventas = pedidos facturados (estados que generan deuda), por fecha de creación.
+ * Ventas = pedidos facturados (estados que generan deuda), por fecha de facturación.
  * Egresos = compras + erogaciones cargadas. Todo por su TOTAL (sin discriminar IVA).
  * RLS ya limita todo a la unidad del usuario.
  */
@@ -73,18 +67,13 @@ export async function getEstadoResultados(
 ): Promise<EstadoResultados> {
   const supabase = await createClient();
 
-  // hasta exclusivo (día siguiente) para incluir todo el día "hasta".
-  const hastaExcl = new Date(hasta + "T00:00:00");
-  hastaExcl.setDate(hastaExcl.getDate() + 1);
-  const hastaExclStr = hastaExcl.toISOString().slice(0, 10);
-
   const [ventasRes, egresosRes] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("total, fecha_creacion")
+      .select("total, fecha_facturacion")
       .in("estado", ESTADOS_GENERAN_DEUDA)
-      .gte("fecha_creacion", desde)
-      .lt("fecha_creacion", hastaExclStr),
+      .gte("fecha_facturacion", desde)
+      .lte("fecha_facturacion", hasta),
     supabase
       .from("egresos")
       .select("tipo, fecha, categoria, monto")
@@ -119,7 +108,7 @@ export async function getEstadoResultados(
   for (const p of ventasRes.data ?? []) {
     const monto = Number(p.total);
     ventas += monto;
-    bucket(new Date(p.fecha_creacion)).ventas += monto;
+    if (p.fecha_facturacion) bucket(new Date(p.fecha_facturacion + "T00:00:00")).ventas += monto;
   }
 
   let compras = 0;
@@ -194,8 +183,8 @@ export async function getFacturacion(desde: string, hasta: string): Promise<Fact
     .from("pedidos")
     .select("id, total, cliente_id, clientes(razon_social, cuit)")
     .in("estado", ESTADOS_GENERAN_DEUDA)
-    .gte("fecha_creacion", desde)
-    .lt("fecha_creacion", hastaExclusivo(hasta))
+    .gte("fecha_facturacion", desde)
+    .lte("fecha_facturacion", hasta)
     .returns<PedFact[]>();
   if (error) throw new Error(error.message);
 
@@ -266,17 +255,17 @@ type PedCobro = {
   id: string;
   numero: number;
   total: number;
-  fecha_creacion: string;
+  fecha_facturacion: string;
   fecha_vencimiento: string | null;
   cliente_id: string;
   clientes: { razon_social: string; condicion_pago_dias: number } | null;
 };
 
-/** Vencimiento de la factura: explícito, o fecha de creación + días de plazo del cliente. */
-function calcVencimiento(fechaCreacion: string, fechaVenc: string | null, dias: number): string {
+/** Vencimiento de la factura: explícito, o fecha de facturación + días de plazo del cliente. */
+function calcVencimiento(fechaFacturacion: string, fechaVenc: string | null, dias: number): string {
   if (fechaVenc) return fechaVenc;
-  const d = new Date(fechaCreacion);
-  d.setDate(d.getDate() + (dias || 0));
+  const d = new Date(fechaFacturacion.slice(0, 10) + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + (dias || 0));
   return d.toISOString().slice(0, 10);
 }
 
@@ -291,9 +280,10 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
   const [pedsRes, pagosRes] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, numero, total, fecha_creacion, fecha_vencimiento, cliente_id, clientes(razon_social, condicion_pago_dias)")
+      .select("id, numero, total, fecha_facturacion, fecha_vencimiento, cliente_id, clientes(razon_social, condicion_pago_dias)")
       .in("estado", ESTADOS_GENERAN_DEUDA)
-      .order("fecha_creacion", { ascending: true })
+      .order("fecha_facturacion", { ascending: true })
+      .order("numero", { ascending: true })
       .returns<PedCobro[]>(),
     supabase.from("pagos").select("cliente_id, monto"),
   ]);
@@ -318,7 +308,7 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
     const saldo = total - pagado;
     if (saldo > 0.01) {
       const vencimiento = calcVencimiento(
-        p.fecha_creacion,
+        p.fecha_facturacion,
         p.fecha_vencimiento,
         p.clientes?.condicion_pago_dias ?? 0,
       );
@@ -331,7 +321,7 @@ export async function getFacturasImpagas(): Promise<FacturaImpaga[]> {
         id: p.id,
         numero: p.numero,
         razon_social: p.clientes?.razon_social ?? "—",
-        fecha: p.fecha_creacion,
+        fecha: p.fecha_facturacion,
         vencimiento,
         estado,
         diasParaVencer,
@@ -381,7 +371,7 @@ export type Liquidacion = {
 type PedLiq = {
   id: string;
   numero: number;
-  fecha_creacion: string;
+  fecha_facturacion: string;
   total: number;
   iva_monto: number;
   vendedor_id: string | null;
@@ -405,11 +395,11 @@ export async function getLiquidacion(
   const [pedsRes, vendedoresRes] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, numero, fecha_creacion, total, iva_monto, vendedor_id, clientes(razon_social, cuit)")
+      .select("id, numero, fecha_facturacion, total, iva_monto, vendedor_id, clientes(razon_social, cuit)")
       .in("estado", ESTADOS_GENERAN_DEUDA)
-      .gte("fecha_creacion", desde)
-      .lt("fecha_creacion", hastaExclusivo(hasta))
-      .order("fecha_creacion", { ascending: true })
+      .gte("fecha_facturacion", desde)
+      .lte("fecha_facturacion", hasta)
+      .order("fecha_facturacion", { ascending: true })
       .returns<PedLiq[]>(),
     supabase.from("vendedores").select("*").returns<Vendedor[]>(),
   ]);
@@ -456,7 +446,7 @@ export async function getLiquidacion(
     g.pedidos.push({
       pedido_id: p.id,
       numero: p.numero,
-      fecha: p.fecha_creacion,
+      fecha: p.fecha_facturacion,
       razon_social: p.clientes?.razon_social ?? "—",
       cuit: p.clientes?.cuit ?? null,
       total,
@@ -592,10 +582,10 @@ export async function getVentasPorProductoMensual(
 
   const { data: peds, error } = await supabase
     .from("pedidos")
-    .select("id, fecha_creacion")
+    .select("id, fecha_facturacion")
     .in("estado", ESTADOS_GENERAN_DEUDA)
-    .gte("fecha_creacion", desde)
-    .lt("fecha_creacion", hastaExclusivo(hasta));
+    .gte("fecha_facturacion", desde)
+    .lte("fecha_facturacion", hasta);
   if (error) throw new Error(error.message);
 
   // Lista de meses del período.
@@ -609,7 +599,7 @@ export async function getVentasPorProductoMensual(
   }
 
   const pedMes = new Map<string, string>();
-  for (const p of peds ?? []) pedMes.set(p.id, mesKey(new Date(p.fecha_creacion)));
+  for (const p of peds ?? []) if (p.fecha_facturacion) pedMes.set(p.id, p.fecha_facturacion.slice(0, 7));
   const ids = [...pedMes.keys()];
   if (ids.length === 0) return { meses, productos: [], totalMonto: 0 };
 
@@ -680,8 +670,8 @@ export async function getReposicion(desde: string, hasta: string): Promise<Repos
     .from("pedidos")
     .select("id")
     .in("estado", ESTADOS_GENERAN_DEUDA)
-    .gte("fecha_creacion", desde)
-    .lt("fecha_creacion", hastaExclusivo(hasta));
+    .gte("fecha_facturacion", desde)
+    .lte("fecha_facturacion", hasta);
   if (error) throw new Error(error.message);
   const ids = (peds ?? []).map((p) => p.id);
 

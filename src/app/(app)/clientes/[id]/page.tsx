@@ -123,7 +123,7 @@ export default async function ClienteDetallePage({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Pedido</TableHead>
-                      <TableHead>Fecha</TableHead>
+                      <TableHead>Facturado</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Pagado</TableHead>
@@ -139,7 +139,7 @@ export default async function ClienteDetallePage({
                           </Link>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {formatDate(p.fecha_creacion)}
+                          {formatDate(p.fecha_facturacion ?? p.fecha_creacion)}
                         </TableCell>
                         <TableCell>
                           <EstadoBadge estado={p.estado} />

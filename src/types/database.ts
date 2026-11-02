@@ -102,6 +102,8 @@ export type Pedido = {
   estado: EstadoPedido;
   fecha_estimada_entrega: string | null;
   fecha_vencimiento: string | null;
+  /** Día en que el pedido se facturó (YYYY-MM-DD). La venta se imputa a esta fecha. */
+  fecha_facturacion: string | null;
   origen: OrigenPedido | null;
   notas: string | null;
   vendedor_id: string | null;
@@ -533,7 +535,7 @@ export interface Database {
       };
       pedidos: {
         Row: Row<Pedido>;
-        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "vendedor_id" | "fecha_vencimiento" | "created_at" | "updated_at">;
+        Insert: Insert<Pedido, "id" | "numero" | "fecha_creacion" | "estado" | "subtotal" | "descuento_monto" | "iva_porcentaje" | "iva_monto" | "total" | "stock_descontado" | "vendedor_id" | "fecha_vencimiento" | "fecha_facturacion" | "created_at" | "updated_at">;
         Update: Update<Pedido>;
         Relationships: [];
       };

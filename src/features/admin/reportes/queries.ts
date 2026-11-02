@@ -9,7 +9,7 @@ import type { Vendedor } from "@/types/database";
  * Criterios (los mismos que el resto de Administración, para que los números
  * cierren entre solapas):
  *  - Venta = pedido en estado que genera deuda (facturado en adelante, sin
- *    cancelados), imputada por su fecha de creación.
+ *    cancelados), imputada por su fecha de facturación.
  *  - Importes del estado de resultados con IVA incluido (criterio de caja),
  *    igual que la solapa "Estado de resultados". La venta neta (sin IVA) se
  *    informa aparte y es la base del ranking de vendedores y comisiones.
@@ -242,7 +242,7 @@ function resolverPeriodo(p: PeriodoReporte, hoy: string): { desde: string; hasta
 type PedidoRow = {
   id: string;
   numero: number;
-  fecha_creacion: string;
+  fecha_facturacion: string; // YYYY-MM-DD (hora argentina)
   fecha_vencimiento: string | null;
   estado: string;
   total: number;
@@ -274,10 +274,10 @@ export async function getReporteGerencial(
       supabase
         .from("pedidos")
         .select(
-          "id, numero, fecha_creacion, fecha_vencimiento, estado, total, iva_monto, cliente_id, vendedor_id, clientes(razon_social, condicion_pago_dias)",
+          "id, numero, fecha_facturacion, fecha_vencimiento, estado, total, iva_monto, cliente_id, vendedor_id, clientes(razon_social, condicion_pago_dias)",
         )
         .in("estado", ESTADOS_GENERAN_DEUDA)
-        .order("fecha_creacion", { ascending: true })
+        .order("fecha_facturacion", { ascending: true })
         .order("numero", { ascending: true })
         .range(from, to)
         .returns<PedidoRow[]>(),
@@ -310,7 +310,7 @@ export async function getReporteGerencial(
 
   const enPeriodo = (fecha: string) => fecha >= desde && fecha <= hasta;
   const pedidosPeriodo = pedidos
-    .map((x) => ({ ...x, dia: diaAR(x.fecha_creacion) }))
+    .map((x) => ({ ...x, dia: x.fecha_facturacion.slice(0, 10) }))
     .filter((x) => enPeriodo(x.dia));
 
   // Meses a mostrar: en "general" y "año" desde el primer movimiento del período
@@ -505,7 +505,7 @@ export async function getReporteGerencial(
     imputado.set(x.id, { pagado, saldo });
     if (saldo <= 0.01) continue;
 
-    const emision = diaAR(x.fecha_creacion);
+    const emision = x.fecha_facturacion.slice(0, 10);
     const vencimiento = x.fecha_vencimiento ?? sumarDias(emision, Number(x.clientes?.condicion_pago_dias ?? 0));
     const dias = diasEntre(hoy, vencimiento);
     const estado: EstadoFactura = dias < 0 ? "vencido" : dias <= DIAS_POR_VENCER ? "por_vencer" : "al_dia";

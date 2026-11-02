@@ -71,9 +71,10 @@ export async function getCobranzaPorPedido(): Promise<Record<string, CobranzaPed
   const [pedidosRes, pagosRes] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, cliente_id, total, fecha_creacion")
+      .select("id, cliente_id, total, fecha_facturacion")
       .in("estado", ESTADOS_GENERAN_DEUDA)
-      .order("fecha_creacion", { ascending: true }),
+      .order("fecha_facturacion", { ascending: true })
+      .order("numero", { ascending: true }),
     supabase.from("pagos").select("cliente_id, monto"),
   ]);
   if (pedidosRes.error) throw new Error(pedidosRes.error.message);

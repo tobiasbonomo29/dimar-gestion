@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/clientes/actions";
 import type { EstadoPedido, TipoComprobante, Comprobante } from "@/types/database";
-import { ESTADOS_PEDIDO } from "@/lib/constants";
+import { ESTADOS_PEDIDO, ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
 import { pedidoSchema, type PedidoFormValues } from "./schema";
 
 /**
@@ -337,5 +337,34 @@ export async function registrarEntrega(
 
   revalidatePath(`/pedidos/${pedidoId}`);
   revalidatePath("/administracion");
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Corrige el día de facturación de un pedido (la venta se imputa a esa fecha
+ * en Administración). Solo para pedidos ya facturados; se usa cuando el pedido
+ * se marcó como facturado en el sistema después de haberse facturado de verdad.
+ */
+export async function actualizarFechaFacturacion(id: string, fecha: string): Promise<ActionResult> {
+  if (!/^d{4}-d{2}-d{2}$/.test(fecha) || Number.isNaN(Date.parse(fecha))) {
+    return { ok: false, error: "Fecha inválida." };
+  }
+  const supabase = await createClient();
+  const { data: pedido, error: readErr } = await supabase
+    .from("pedidos")
+    .select("estado")
+    .eq("id", id)
+    .maybeSingle();
+  if (readErr) return { ok: false, error: readErr.message };
+  if (!pedido) return { ok: false, error: "El pedido no existe" };
+  if (!ESTADOS_GENERAN_DEUDA.includes(pedido.estado)) {
+    return { ok: false, error: "El pedido todavía no está facturado." };
+  }
+  const { error } = await supabase.from("pedidos").update({ fecha_facturacion: fecha }).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/pedidos/${id}`);
+  revalidatePath("/pedidos");
+  revalidatePath("/administracion");
+  revalidatePath("/clientes");
   return { ok: true, data: undefined };
 }

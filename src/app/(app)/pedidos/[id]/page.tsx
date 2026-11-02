@@ -16,9 +16,10 @@ import { CambiarEstado } from "@/features/pedidos/components/cambiar-estado";
 import { DescargarCotizacion } from "@/features/pedidos/components/descargar-cotizacion";
 import { ComprobantesPanel } from "@/features/pedidos/components/comprobantes-panel";
 import { EntregasPanel } from "@/features/pedidos/components/entregas-panel";
+import { FechaFacturacion } from "@/features/pedidos/components/fecha-facturacion";
 import { getPedido } from "@/features/pedidos/queries";
 import { getPuntosVenta } from "@/features/puntos-venta/queries";
-import { CONDICIONES_FISCALES, ORIGENES_PEDIDO } from "@/lib/constants";
+import { CONDICIONES_FISCALES, ESTADOS_GENERAN_DEUDA, ORIGENES_PEDIDO } from "@/lib/constants";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function PedidoDetallePage({
           </div>
           <p className="text-sm text-muted-foreground">
             Creado el {formatDate(pedido.fecha_creacion)}
+            {pedido.fecha_facturacion ? ` · Facturado el ${formatDate(pedido.fecha_facturacion)}` : ""}
             {pedido.origen ? ` · Origen: ${ORIGENES_PEDIDO[pedido.origen]}` : ""}
           </p>
         </div>
@@ -144,8 +146,11 @@ export default async function PedidoDetallePage({
             <CardHeader>
               <CardTitle className="text-base">Estado</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <CambiarEstado pedidoId={pedido.id} estadoActual={pedido.estado} />
+              {ESTADOS_GENERAN_DEUDA.includes(pedido.estado) && (
+                <FechaFacturacion pedidoId={pedido.id} fecha={pedido.fecha_facturacion} />
+              )}
             </CardContent>
           </Card>
 

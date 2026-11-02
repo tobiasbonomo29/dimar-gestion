@@ -119,7 +119,7 @@ export function EstadoResultadosPDF({
 
         <Text style={styles.footer} fixed>
           {empresa.nombre} — Estado de resultados generado el {formatDate(new Date())}. Vista de
-          gestión (no contable/fiscal). Ventas por fecha de creación del pedido.
+          gestión (no contable/fiscal). Ventas por fecha de facturación del pedido.
         </Text>
       </Page>
     </Document>
