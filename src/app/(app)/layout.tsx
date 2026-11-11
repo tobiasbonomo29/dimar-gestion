@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/server";
@@ -39,7 +40,18 @@ export default async function AppLayout({
 
       {/* Contenido */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 p-4 md:p-8">{children}</main>
+        <MobileNav
+          empresaNombre={empresa.nombre}
+          footer={
+            <>
+              <div className="px-3 pb-1">
+                <ThemeToggle />
+              </div>
+              {user?.email && <UserMenu email={user.email} />}
+            </>
+          }
+        />
+        <main className="flex-1 p-3 sm:p-4 md:p-8">{children}</main>
       </div>
     </div>
     </EmpresaProvider>

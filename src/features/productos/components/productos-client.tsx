@@ -64,14 +64,14 @@ export function ProductosClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[90px]">Código</TableHead>
+              <TableHead className="hidden md:table-cell w-[90px]">Código</TableHead>
               <TableHead>Producto</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Unidad</TableHead>
+              <TableHead className="hidden md:table-cell">Categoría</TableHead>
+              <TableHead className="hidden md:table-cell">Unidad</TableHead>
               <TableHead className="text-right">Precio base</TableHead>
               <TableHead className="text-right">Stock</TableHead>
-              <TableHead>Variantes</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead className="hidden md:table-cell">Variantes</TableHead>
+              <TableHead className="hidden md:table-cell">Estado</TableHead>
               <TableHead className="w-[90px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -85,16 +85,23 @@ export function ProductosClient({
             ) : (
               productos.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
                     {p.codigo ?? "—"}
                   </TableCell>
-                  <TableCell className="font-medium">{getProductoNombre(p)}</TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[140px] whitespace-normal font-medium">
+                    {getProductoNombre(p)}
+                    {p.codigo && (
+                      <span className="block font-mono text-xs font-normal text-muted-foreground md:hidden">
+                        {p.codigo}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge className="border-slate-200 bg-slate-100 text-slate-700">
                       {p.categoria}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.unidad_medida}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{p.unidad_medida}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(p.precio_base)}
                   </TableCell>
@@ -106,7 +113,7 @@ export function ProductosClient({
                   >
                     {formatNumber(p.stock)}
                   </TableCell>
-                  <TableCell className="max-w-[260px]">
+                  <TableCell className="hidden md:table-cell max-w-[260px]">
                     {p.producto_variantes.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
@@ -115,7 +122,7 @@ export function ProductosClient({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {p.activo ? (
                       <Badge className="border-green-200 bg-green-100 text-green-700">
                         Activo

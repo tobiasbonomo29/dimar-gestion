@@ -71,7 +71,54 @@ export function ClientesClient({
         </Button>
       </div>
 
-      <div className="rounded-lg border">
+      {/* Celular: tarjetas */}
+      <div className="space-y-2 md:hidden">
+        {clientes.length === 0 ? (
+          <p className="rounded-lg border py-10 text-center text-sm text-muted-foreground">
+            No hay clientes. Creá el primero con “Nuevo cliente”.
+          </p>
+        ) : (
+          clientes.map((c) => (
+            <div key={c.id} className="flex items-stretch gap-1 rounded-lg border bg-card">
+              <Link href={`/clientes/${c.id}`} className="min-w-0 flex-1 p-3 active:bg-accent">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="truncate text-sm font-medium">{c.razon_social}</p>
+                  <span
+                    className={cn(
+                      "shrink-0 text-sm font-semibold tabular-nums",
+                      c.saldo > 0 ? "text-red-600" : "text-muted-foreground",
+                    )}
+                  >
+                    {formatCurrency(c.saldo)}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {[c.nombre_contacto, c.telefono, c.vendedor_id ? vendedorNombre.get(c.vendedor_id) : null]
+                    .filter(Boolean)
+                    .join(" · ") || CONDICIONES_FISCALES[c.condicion_fiscal]}
+                </p>
+              </Link>
+              <div className="flex flex-col justify-center border-l">
+                <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openEdit(c)} aria-label="Editar">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 text-destructive hover:text-destructive"
+                  onClick={() => setToDelete(c)}
+                  aria-label="Eliminar"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Escritorio: tabla */}
+      <div className="hidden rounded-lg border md:block">
         <Table>
           <TableHeader>
             <TableRow>

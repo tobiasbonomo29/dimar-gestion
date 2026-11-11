@@ -116,3 +116,22 @@ body {
   background-color: var(--background);
   color: var(--foreground);
 }
+
+/* Panel de navegación móvil */
+@keyframes nav-slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nav-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Grillas de una columna (celular): la columna no puede ser más ancha que el
+   contenedor. Sin esto, el contenido largo ensancha la grilla y la página se
+   sale de la pantalla. Las clases grid-cols-* (capa utilities) lo reemplazan. */
+@layer base {
+  :where(.grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

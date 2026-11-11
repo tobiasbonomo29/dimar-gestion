@@ -72,9 +72,9 @@ export default async function PedidoDetallePage({
                   <TableRow>
                     <TableHead>Descripción</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
-                    <TableHead className="text-right">Entregado</TableHead>
-                    <TableHead className="text-right">Pendiente</TableHead>
-                    <TableHead className="text-right">Precio unit.</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Entregado</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Pendiente</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Precio unit.</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -83,15 +83,21 @@ export default async function PedidoDetallePage({
                     const pend = Number(it.cantidad) - Number(it.cantidad_entregada);
                     return (
                       <TableRow key={it.id}>
-                        <TableCell>{it.descripcion}</TableCell>
+                        <TableCell className="min-w-[140px] whitespace-normal">
+                          {it.descripcion}
+                          <span className="block text-xs text-muted-foreground md:hidden">
+                            {formatCurrency(it.precio_unitario)} c/u
+                            {Number(it.cantidad_entregada) > 0 ? ` · entregado ${it.cantidad_entregada}` : ""}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">{it.cantidad}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                        <TableCell className="hidden md:table-cell text-right tabular-nums text-muted-foreground">
                           {it.cantidad_entregada}
                         </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
+                        <TableCell className="hidden md:table-cell text-right font-medium tabular-nums">
                           {pend > 0 ? pend : <span className="text-[var(--viz-pos,#0ca30c)]">0</span>}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="hidden md:table-cell text-right tabular-nums">
                           {formatCurrency(it.precio_unitario)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
