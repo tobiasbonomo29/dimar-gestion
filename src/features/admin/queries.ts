@@ -162,31 +162,51 @@ export type FacturacionCliente = {
   cantidad: number;
 };
 export type FacturacionProducto = { descripcion: string; cantidad: number; monto: number };
+/** Una venta (pedido facturado) con el vendedor a cargo. */
+export type FacturacionVenta = {
+  id: string;
+  numero: number;
+  fecha: string;
+  razon_social: string;
+  /** Vendedor asignado al pedido (mismo criterio que el ranking de Reportes). */
+  vendedor: string | null;
+  total: number;
+};
 export type Facturacion = {
   total: number;
   cantFacturas: number;
   porCliente: FacturacionCliente[];
   porProducto: FacturacionProducto[];
+  ventas: FacturacionVenta[];
 };
 
 type PedFact = {
   id: string;
+  numero: number;
+  fecha_facturacion: string;
   total: number;
   cliente_id: string;
+  vendedor_id: string | null;
   clientes: { razon_social: string; cuit: string | null } | null;
 };
 
 /** Total facturado del período + desglose por cliente y por producto. */
 export async function getFacturacion(desde: string, hasta: string): Promise<Facturacion> {
   const supabase = await createClient();
-  const { data: peds, error } = await supabase
-    .from("pedidos")
-    .select("id, total, cliente_id, clientes(razon_social, cuit)")
-    .in("estado", ESTADOS_GENERAN_DEUDA)
-    .gte("fecha_facturacion", desde)
-    .lte("fecha_facturacion", hasta)
-    .returns<PedFact[]>();
-  if (error) throw new Error(error.message);
+  const [pedsRes, vendRes] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, numero, fecha_facturacion, total, cliente_id, vendedor_id, clientes(razon_social, cuit)")
+      .in("estado", ESTADOS_GENERAN_DEUDA)
+      .gte("fecha_facturacion", desde)
+      .lte("fecha_facturacion", hasta)
+      .returns<PedFact[]>(),
+    supabase.from("vendedores").select("id, nombre"),
+  ]);
+  if (pedsRes.error) throw new Error(pedsRes.error.message);
+  if (vendRes.error) throw new Error(vendRes.error.message);
+  const peds = pedsRes.data;
+  const nombreVendedor = new Map((vendRes.data ?? []).map((v) => [v.id, v.nombre]));
 
   const ids = (peds ?? []).map((p) => p.id);
   let items: { descripcion: string; cantidad: number; subtotal: number }[] = [];
@@ -230,6 +250,16 @@ export async function getFacturacion(desde: string, hasta: string): Promise<Fact
     cantFacturas: peds?.length ?? 0,
     porCliente: [...porCliente.values()].sort((a, b) => b.monto - a.monto),
     porProducto: [...porProducto.values()].sort((a, b) => b.monto - a.monto),
+    ventas: (peds ?? [])
+      .map((p) => ({
+        id: p.id,
+        numero: p.numero,
+        fecha: p.fecha_facturacion,
+        razon_social: p.clientes?.razon_social ?? "—",
+        vendedor: p.vendedor_id ? (nombreVendedor.get(p.vendedor_id) ?? null) : null,
+        total: Number(p.total),
+      }))
+      .sort((a, b) => b.fecha.localeCompare(a.fecha)),
   };
 }
 

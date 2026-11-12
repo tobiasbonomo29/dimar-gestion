@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Users, Package, TrendingUp, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { exportSheetsToExcel } from "@/lib/export-excel";
 import type { Facturacion } from "../queries";
 
@@ -37,6 +38,16 @@ export function FacturacionPanel({
             { Concepto: "Cantidad de facturas", Valor: facturacion.cantFacturas },
             { Concepto: "Clientes", Valor: facturacion.porCliente.length },
           ],
+        },
+        {
+          name: "Por venta",
+          rows: facturacion.ventas.map((v) => ({
+            Fecha: formatDate(v.fecha),
+            Pedido: v.numero,
+            Cliente: v.razon_social,
+            Vendedor: v.vendedor ?? "Sin vendedor",
+            Total: v.total,
+          })),
         },
         {
           name: "Por cliente",
@@ -105,11 +116,58 @@ export function FacturacionPanel({
         </Card>
       </div>
 
-      <Tabs defaultValue="cliente">
+      <Tabs defaultValue="venta">
         <TabsList>
+          <TabsTrigger value="venta">Por venta</TabsTrigger>
           <TabsTrigger value="cliente">Por cliente</TabsTrigger>
           <TabsTrigger value="producto">Por producto</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="venta">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Ventas y vendedor a cargo</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Fecha</TableHead>
+                    <TableHead className="w-[90px]">Pedido</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {facturacion.ventas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        Sin ventas en el período.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    facturacion.ventas.map((v) => (
+                      <TableRow key={v.id}>
+                        <TableCell className="text-muted-foreground">{formatDate(v.fecha)}</TableCell>
+                        <TableCell className="tabular-nums">
+                          <Link href={`/pedidos/${v.id}`} className="hover:underline">
+                            #{v.numero}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-medium">{v.razon_social}</TableCell>
+                        <TableCell className={v.vendedor ? "" : "text-muted-foreground"}>
+                          {v.vendedor ?? "Sin vendedor"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">{formatCurrency(v.total)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="cliente">
           <Card>

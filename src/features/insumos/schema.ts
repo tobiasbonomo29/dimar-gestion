@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CondicionPago } from "@/lib/condicion-pago";
 
 const MEDIOS = ["efectivo", "transferencia", "cheque", "tarjeta", "otro"] as const;
 
@@ -50,6 +51,8 @@ export const compraItemSchema = z.object({
   precio_unitario: z.coerce.number().nonnegative("El precio no puede ser negativo"),
 });
 
+const CONDICIONES = ["contado", "contra_entrega", "dias", "fecha"] as const;
+
 export const compraSchema = z.object({
   fecha: z
     .string()
@@ -57,6 +60,17 @@ export const compraSchema = z.object({
     .transform((v) => (v === "" || v === undefined ? null : v)),
   proveedor: optText,
   medio_pago: z.enum(MEDIOS).default("transferencia"),
+  condicion_pago: z.enum(CONDICIONES).default("contado"),
+  // Plazo en días; solo se usa con condicion_pago = "dias".
+  dias_pago: z
+    .union([z.coerce.number().int().min(0, "El plazo no puede ser negativo"), z.literal(""), z.null()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : (v as number | null))),
+  // Vencimiento cargado a mano; solo se usa con condicion_pago = "fecha".
+  vencimiento: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
   nota: z
     .string()
     .trim()
@@ -77,6 +91,9 @@ export type CompraFormValues = {
   fecha: string;
   proveedor: string;
   medio_pago: (typeof MEDIOS)[number];
+  condicion_pago: CondicionPago;
+  dias_pago: string;
+  vencimiento: string;
   nota: string;
   items: CompraItemFormValues[];
 };
@@ -92,6 +109,9 @@ export const compraDefaults: CompraFormValues = {
   fecha: new Date().toISOString().slice(0, 10),
   proveedor: "",
   medio_pago: "transferencia",
+  condicion_pago: "contado",
+  dias_pago: "",
+  vencimiento: "",
   nota: "",
   items: [],
 };

@@ -30,6 +30,9 @@ export type MedioPago = "efectivo" | "transferencia" | "cheque" | "tarjeta" | "o
 
 export type TipoEgreso = "compra" | "erogacion";
 
+/** Condición de pago de una compra / factura de proveedor. */
+export type CondicionPagoCompra = "contado" | "contra_entrega" | "dias" | "fecha";
+
 export type Vendedor = {
   id: string;
   unidad_id: string;
@@ -287,6 +290,11 @@ export type Compra = {
   total: number;
   nota: string | null;
   egreso_id: string | null;
+  condicion_pago: CondicionPagoCompra;
+  dias_pago: number | null;
+  vencimiento: string | null;
+  /** Factura generada en Cuentas a pagar cuando la compra va a plazo. */
+  factura_compra_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -309,6 +317,8 @@ export type FacturaCompra = {
   numero: string | null;
   fecha: string;
   vencimiento: string | null;
+  condicion_pago: CondicionPagoCompra;
+  dias_pago: number | null;
   monto: number;
   nota: string | null;
   created_at: string;
@@ -619,7 +629,7 @@ export interface Database {
       };
       compras: {
         Row: Row<Compra>;
-        Insert: Insert<Compra, "id" | "unidad_id" | "numero" | "fecha" | "medio_pago" | "total" | "proveedor" | "nota" | "egreso_id" | "created_at" | "updated_at">;
+        Insert: Insert<Compra, "id" | "unidad_id" | "numero" | "fecha" | "medio_pago" | "total" | "proveedor" | "nota" | "egreso_id" | "condicion_pago" | "dias_pago" | "vencimiento" | "factura_compra_id" | "created_at" | "updated_at">;
         Update: Update<Compra>;
         Relationships: [];
       };
@@ -643,7 +653,7 @@ export interface Database {
       };
       facturas_compra: {
         Row: Row<FacturaCompra>;
-        Insert: Insert<FacturaCompra, "id" | "unidad_id" | "fecha" | "numero" | "vencimiento" | "nota" | "created_at" | "updated_at">;
+        Insert: Insert<FacturaCompra, "id" | "unidad_id" | "fecha" | "numero" | "vencimiento" | "condicion_pago" | "dias_pago" | "nota" | "created_at" | "updated_at">;
         Update: Update<FacturaCompra>;
         Relationships: [];
       };
@@ -787,6 +797,7 @@ export interface Database {
       farm_tipo_ingreso: FarmTipoIngreso;
       farm_rubro_egreso: FarmRubroEgreso;
       farm_modo_cmv: FarmModoCmv;
+      condicion_pago_compra: CondicionPagoCompra;
     };
     CompositeTypes: Record<string, never>;
   };

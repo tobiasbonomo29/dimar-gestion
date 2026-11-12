@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/clientes/actions";
+import { calcularVencimiento } from "@/lib/condicion-pago";
 import {
   facturaCompraSchema,
   pagoCompraSchema,
@@ -17,13 +18,22 @@ export async function crearFacturaCompra(values: FacturaCompraFormValues): Promi
   }
   const f = parsed.data;
   const supabase = await createClient();
+  const fecha = f.fecha ?? new Date().toISOString().slice(0, 10);
   const { error } = await supabase.from("facturas_compra").insert({
     proveedor: f.proveedor,
     numero: f.numero ?? null,
     monto: f.monto,
     nota: f.nota ?? null,
-    ...(f.fecha ? { fecha: f.fecha } : {}),
-    vencimiento: f.vencimiento,
+    fecha,
+    // El vencimiento sale de la condicion pactada (a X dias, contra entrega...).
+    vencimiento: calcularVencimiento({
+      fecha,
+      condicion: f.condicion_pago,
+      dias: f.dias_pago,
+      vencimientoManual: f.vencimiento,
+    }),
+    condicion_pago: f.condicion_pago,
+    dias_pago: f.dias_pago,
   });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/cuentas-pagar");

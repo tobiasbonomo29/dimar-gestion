@@ -16,12 +16,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { exportToExcel } from "@/lib/export-excel";
+import { condicionTexto } from "@/lib/condicion-pago";
 import type { CuentasPagar, FacturaCompraRow, EstadoPago } from "../queries";
 import { FacturaCompraFormDialog } from "./factura-compra-form-dialog";
 import { PagoCompraDialog } from "./pago-compra-dialog";
+import { CalendarioPanel } from "./calendario-panel";
 import { eliminarFacturaCompra } from "../actions";
 
 const BADGE: Record<EstadoPago, string> = {
@@ -66,6 +69,7 @@ export function CuentasPagarView({ data }: { data: CuentasPagar }) {
         Proveedor: f.proveedor,
         "N°": f.numero ?? "",
         Fecha: formatDate(f.fecha),
+        "Condición": condicionTexto(f.condicion_pago, f.dias_pago),
         Vencimiento: f.vencimiento ? formatDate(f.vencimiento) : "",
         Estado: estadoTexto(f),
         Monto: f.monto,
@@ -131,91 +135,108 @@ export function CuentasPagarView({ data }: { data: CuentasPagar }) {
         </Card>
       </div>
 
-      {/* Cuánto le debo a cada proveedor */}
-      {data.porProveedor.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Cuánto le debo a cada proveedor</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Proveedor</TableHead>
-                  <TableHead className="text-right">Facturas impagas</TableHead>
-                  <TableHead className="text-right">Saldo a pagar</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.porProveedor.map((p) => (
-                  <TableRow key={p.proveedor}>
-                    <TableCell className="font-medium">{p.proveedor}</TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">{p.facturas}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{formatCurrency(p.saldo)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="facturas" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="facturas">Facturas</TabsTrigger>
+          <TabsTrigger value="calendario">Calendario de pagos</TabsTrigger>
+        </TabsList>
 
-      {/* Facturas */}
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Proveedor</TableHead>
-              <TableHead>N°</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Vencimiento</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
-              <TableHead className="w-[90px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.facturas.length === 0 ? (
+        <TabsContent value="facturas" className="space-y-4">
+        {/* Cuánto le debo a cada proveedor */}
+        {data.porProveedor.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Cuánto le debo a cada proveedor</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Proveedor</TableHead>
+                    <TableHead className="text-right">Facturas impagas</TableHead>
+                    <TableHead className="text-right">Saldo a pagar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.porProveedor.map((p) => (
+                    <TableRow key={p.proveedor}>
+                      <TableCell className="font-medium">{p.proveedor}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{p.facturas}</TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">{formatCurrency(p.saldo)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Facturas */}
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  Todavía no cargaste facturas de compra. Empezá con “Nueva factura”.
-                </TableCell>
+                <TableHead>Proveedor</TableHead>
+                <TableHead>N°</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Condición</TableHead>
+                <TableHead>Vencimiento</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
+                <TableHead className="w-[90px]" />
               </TableRow>
-            ) : (
-              data.facturas.map((f) => (
-                <TableRow key={f.id}>
-                  <TableCell className="font-medium">{f.proveedor}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.numero ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(f.fecha)}</TableCell>
-                  <TableCell className="text-muted-foreground">{f.vencimiento ? formatDate(f.vencimiento) : "—"}</TableCell>
-                  <TableCell>
-                    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-medium", BADGE[f.estado])}>
-                      {estadoTexto(f)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(f.monto)}</TableCell>
-                  <TableCell className={cn("text-right font-medium tabular-nums", f.estado === "vencido" && "text-red-600")}>
-                    {formatCurrency(f.saldo)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      {f.saldo > 0.01 && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPagar(f)} aria-label="Registrar pago">
-                          <HandCoins className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setBorrar(f)} aria-label="Eliminar">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {data.facturas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    Todavía no cargaste facturas de compra. Empezá con “Nueva factura”.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                data.facturas.map((f) => (
+                  <TableRow key={f.id}>
+                    <TableCell className="font-medium">{f.proveedor}</TableCell>
+                    <TableCell className="text-muted-foreground">{f.numero ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(f.fecha)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {condicionTexto(f.condicion_pago, f.dias_pago)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{f.vencimiento ? formatDate(f.vencimiento) : "—"}</TableCell>
+                    <TableCell>
+                      <span className={cn("inline-block rounded-full border px-2 py-0.5 text-xs font-medium", BADGE[f.estado])}>
+                        {estadoTexto(f)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(f.monto)}</TableCell>
+                    <TableCell className={cn("text-right font-medium tabular-nums", f.estado === "vencido" && "text-red-600")}>
+                      {formatCurrency(f.saldo)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        {f.saldo > 0.01 && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPagar(f)} aria-label="Registrar pago">
+                            <HandCoins className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setBorrar(f)} aria-label="Eliminar">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        </TabsContent>
+
+        <TabsContent value="calendario">
+          <CalendarioPanel facturas={data.facturas} onPagar={setPagar} />
+        </TabsContent>
+      </Tabs>
 
       <FacturaCompraFormDialog open={nueva} onOpenChange={setNueva} />
       <PagoCompraDialog factura={pagar} onOpenChange={() => setPagar(null)} />

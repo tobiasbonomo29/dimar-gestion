@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CondicionPagoFields } from "@/components/condicion-pago-fields";
 import { crearFacturaCompra } from "../actions";
 import { facturaCompraDefaults, type FacturaCompraFormValues } from "../schema";
 
@@ -29,9 +30,8 @@ export function FacturaCompraFormDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FacturaCompraFormValues>({
-    defaultValues: facturaCompraDefaults,
-  });
+  const { register, handleSubmit, reset, watch, setValue, formState: { isSubmitting } } =
+    useForm<FacturaCompraFormValues>({ defaultValues: facturaCompraDefaults });
 
   React.useEffect(() => {
     if (open) reset(facturaCompraDefaults);
@@ -73,16 +73,25 @@ export function FacturaCompraFormDialog({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="fecha">Fecha de la factura</Label>
-              <Input id="fecha" type="date" {...register("fecha")} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="vencimiento">Vencimiento</Label>
-              <Input id="vencimiento" type="date" {...register("vencimiento")} />
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="fecha">Fecha de la factura</Label>
+            <Input id="fecha" type="date" {...register("fecha")} />
           </div>
+
+          <CondicionPagoFields
+            fecha={watch("fecha")}
+            values={{
+              condicion_pago: watch("condicion_pago"),
+              dias_pago: watch("dias_pago"),
+              vencimiento: watch("vencimiento"),
+            }}
+            onChange={(v) => {
+              setValue("condicion_pago", v.condicion_pago);
+              setValue("dias_pago", v.dias_pago);
+              setValue("vencimiento", v.vencimiento);
+            }}
+            ayudaContado="Ya pagada: no suma al total a pagar."
+          />
 
           <div className="grid gap-2">
             <Label htmlFor="nota">Nota</Label>

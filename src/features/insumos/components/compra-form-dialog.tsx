@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MEDIOS_PAGO } from "@/lib/constants";
+import { CondicionPagoFields } from "@/components/condicion-pago-fields";
 import { formatCurrency } from "@/lib/format";
 import type { Insumo } from "@/types/database";
 import { crearCompra } from "../actions";
@@ -128,6 +129,21 @@ export function CompraFormDialog({
               </Select>
             </div>
           </div>
+
+          <CondicionPagoFields
+            fecha={watch("fecha")}
+            values={{
+              condicion_pago: watch("condicion_pago"),
+              dias_pago: watch("dias_pago"),
+              vencimiento: watch("vencimiento"),
+            }}
+            onChange={(v) => {
+              setValue("condicion_pago", v.condicion_pago);
+              setValue("dias_pago", v.dias_pago);
+              setValue("vencimiento", v.vencimiento);
+            }}
+            ayudaContado="Se paga al momento: no queda deuda en Cuentas a pagar."
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
