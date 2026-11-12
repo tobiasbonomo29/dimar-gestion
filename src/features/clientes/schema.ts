@@ -41,6 +41,7 @@ export const clienteSchema = z.object({
     .optional()
     .transform((v) => (v === "" || v === undefined ? undefined : v)),
   condicion_pago_dias: z.coerce.number().int().min(0).max(365).default(0),
+  excluir_facturacion: z.boolean().default(false),
 });
 
 export type ClienteFormValues = z.infer<typeof clienteSchema>;
@@ -56,4 +57,5 @@ export const clienteDefaults: ClienteFormValues = {
   notas: undefined,
   vendedor_id: undefined,
   condicion_pago_dias: 0,
+  excluir_facturacion: false,
 };

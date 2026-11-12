@@ -107,7 +107,7 @@ export function descargarReporteExcel(r: ReporteGerencial, archivo: string) {
         {
           Pedido: "TOTAL",
           Fecha: "",
-          Estado: `${valmax.cantPedidos} pedidos · ${(valmax.participacion * 100).toFixed(1)}% de las ventas netas`,
+          Estado: `${valmax.cantPedidos} pedidos · ${(valmax.participacion * 100).toFixed(1)}% sobre ventas + envíos`,
           "Neto (sin IVA)": valmax.ventasNetas,
           IVA: Math.round((valmax.ventasBrutas - valmax.ventasNetas) * 100) / 100,
           Total: valmax.ventasBrutas,

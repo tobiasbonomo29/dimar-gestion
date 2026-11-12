@@ -2,6 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
 import type { Cliente, Pago, Pedido } from "@/types/database";
 
+type DbClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Ids de los clientes internos (ej. Valmax): sus pedidos no suman a la
+ * facturación ni a las ventas, aunque mantienen cuenta corriente.
+ */
+export async function getClientesInternosIds(db?: DbClient): Promise<Set<string>> {
+  const supabase = db ?? (await createClient());
+  const { data, error } = await supabase.from("clientes").select("id").eq("excluir_facturacion", true);
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((c) => c.id));
+}
+
 /**
  * Lista clientes, opcionalmente filtrando por razón social, contacto o email.
  * Ordena por fecha de alta descendente (los más nuevos primero).

@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -55,6 +56,7 @@ function toFormValues(c: Cliente): ClienteFormValues {
     notas: c.notas ?? undefined,
     vendedor_id: c.vendedor_id ?? undefined,
     condicion_pago_dias: c.condicion_pago_dias ?? 0,
+    excluir_facturacion: c.excluir_facturacion ?? false,
   };
 }
 
@@ -83,6 +85,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, onC
 
   const condicion = watch("condicion_fiscal");
   const vendedorId = watch("vendedor_id");
+  const excluirFacturacion = watch("excluir_facturacion");
 
   async function onSubmit(values: ClienteFormValues) {
     if (isEdit) {
@@ -220,6 +223,21 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, onC
               </Select>
             </div>
           )}
+
+          <div className="flex items-start gap-3 rounded-md border p-3">
+            <Switch
+              id="excluir_facturacion"
+              checked={excluirFacturacion}
+              onCheckedChange={(v) => setValue("excluir_facturacion", v)}
+            />
+            <div className="grid gap-1">
+              <Label htmlFor="excluir_facturacion">Cliente interno (no suma a la facturación)</Label>
+              <p className="text-xs text-muted-foreground">
+                Sus pedidos descuentan stock y llevan cuenta corriente, pero no cuentan como venta
+                en Administración ni en comisiones. Ej: envíos a Valmax.
+              </p>
+            </div>
+          </div>
 
           <div className="grid gap-2">
             <Label htmlFor="notas">Notas</Label>

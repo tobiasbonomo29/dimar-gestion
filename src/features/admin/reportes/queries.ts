@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
+import { getClientesInternosIds } from "@/features/clientes/queries";
 import type { Vendedor } from "@/types/database";
 
 /**
@@ -15,6 +16,9 @@ import type { Vendedor } from "@/types/database";
  *    informa aparte y es la base del ranking de vendedores y comisiones.
  *  - Cobranza: los pagos son a nivel cliente y se imputan FIFO (la factura más
  *    vieja primero), igual que la cuenta corriente.
+ *  - Clientes internos (ej. Valmax, marcados con excluir_facturacion): sus
+ *    pedidos no son venta. Quedan fuera del estado de resultados, el ranking y
+ *    la cobranza, y se informan solo en la sección "Valmax".
  *  - Los meses se cortan en hora argentina (los pedidos guardan fecha y hora).
  */
 
@@ -89,7 +93,7 @@ export type VentasValmax = {
   cantPedidos: number;
   ventasNetas: number;
   ventasBrutas: number;
-  participacion: number; // sobre ventas netas totales del período
+  participacion: number; // sobre (ventas netas + envíos internos) del período
   pagado: number;
   saldo: number;
   pedidos: ValmaxPedido[];
@@ -269,7 +273,7 @@ export async function getReporteGerencial(
 
   // Todos los pedidos que generan deuda (se necesitan todos para la foto de
   // cobranza FIFO); el período se filtra en memoria por fecha argentina.
-  const [pedidos, pagos, egresos, aportes, vendedoresRes] = await Promise.all([
+  const [pedidos, pagos, egresos, aportes, vendedoresRes, internos] = await Promise.all([
     fetchAll<PedidoRow>((from, to) =>
       supabase
         .from("pedidos")
@@ -304,6 +308,7 @@ export async function getReporteGerencial(
         .range(from, to),
     ),
     supabase.from("vendedores").select("*").returns<Vendedor[]>(),
+    getClientesInternosIds(supabase),
   ]);
   if (vendedoresRes.error) throw new Error(vendedoresRes.error.message);
   const vendMap = new Map((vendedoresRes.data ?? []).map((v) => [v.id, v]));
@@ -312,6 +317,8 @@ export async function getReporteGerencial(
   const pedidosPeriodo = pedidos
     .map((x) => ({ ...x, dia: x.fecha_facturacion.slice(0, 10) }))
     .filter((x) => enPeriodo(x.dia));
+  // Ventas reales del período: sin los envíos a clientes internos.
+  const ventasPeriodo = pedidosPeriodo.filter((x) => !internos.has(x.cliente_id));
 
   // Meses a mostrar: en "general" y "año" desde el primer movimiento del período
   // (sin meses vacíos al principio); nunca más allá de hoy.
@@ -345,7 +352,7 @@ export async function getReporteGerencial(
 
   let ventasBrutas = 0;
   let ivaVentas = 0;
-  for (const x of pedidosPeriodo) {
+  for (const x of ventasPeriodo) {
     const total = Number(x.total);
     const iva = Number(x.iva_monto);
     ventasBrutas += total;
@@ -410,7 +417,7 @@ export async function getReporteGerencial(
     ventasBrutas: r2(ventasBrutas),
     ivaVentas: r2(ivaVentas),
     ventasNetas: r2(ventasBrutas - ivaVentas),
-    cantVentas: pedidosPeriodo.length,
+    cantVentas: ventasPeriodo.length,
     compras: r2(compras),
     erogaciones: r2(erogaciones),
     egresosTotal: r2(egresosTotal),
@@ -433,7 +440,7 @@ export async function getReporteGerencial(
     porMes: Record<string, number>;
   };
   const vMap = new Map<string, AccV>();
-  for (const x of pedidosPeriodo) {
+  for (const x of ventasPeriodo) {
     const key = x.vendedor_id ?? "__sin__";
     let a = vMap.get(key);
     if (!a) {
@@ -503,7 +510,8 @@ export async function getReporteGerencial(
     disponible.set(x.cliente_id, disp - pagado);
     const saldo = total - pagado;
     imputado.set(x.id, { pagado, saldo });
-    if (saldo <= 0.01) continue;
+    // La deuda de los clientes internos se sigue en su propia sección.
+    if (saldo <= 0.01 || internos.has(x.cliente_id)) continue;
 
     const emision = x.fecha_facturacion.slice(0, 10);
     const vencimiento = x.fecha_vencimiento ?? sumarDias(emision, Number(x.clientes?.condicion_pago_dias ?? 0));
@@ -537,7 +545,7 @@ export async function getReporteGerencial(
 
   // Pagos de clientes sin facturas pendientes que los absorban = saldo a favor.
   const aFavor = new Map<string, number>();
-  for (const [cid, resto] of disponible) if (resto > 0.01) aFavor.set(cid, resto);
+  for (const [cid, resto] of disponible) if (resto > 0.01 && !internos.has(cid)) aFavor.set(cid, resto);
 
   // Nombres de clientes que solo tienen pagos (sin pedidos facturados).
   const sinNombre = [...new Set(pagos.map((x) => x.cliente_id))].filter((id) => !nombreCliente.has(id));
@@ -546,9 +554,9 @@ export async function getReporteGerencial(
     for (const c of data ?? []) nombreCliente.set(c.id, c.razon_social);
   }
 
-  const pagosPeriodo = pagos.filter((x) => enPeriodo(x.fecha));
+  const pagosPeriodo = pagos.filter((x) => enPeriodo(x.fecha) && !internos.has(x.cliente_id));
   const cobradoPeriodo = pagosPeriodo.reduce((a, x) => a + Number(x.monto), 0);
-  const pendienteDelPeriodo = pedidosPeriodo.reduce((a, x) => a + (imputado.get(x.id)?.saldo ?? 0), 0);
+  const pendienteDelPeriodo = ventasPeriodo.reduce((a, x) => a + (imputado.get(x.id)?.saldo ?? 0), 0);
 
   const cliMap = new Map<string, CobranzaCliente>();
   const cli = (id: string) => {
@@ -566,7 +574,7 @@ export async function getReporteGerencial(
     }
     return c;
   };
-  for (const x of pedidosPeriodo) cli(x.cliente_id).facturadoPeriodo += Number(x.total);
+  for (const x of ventasPeriodo) cli(x.cliente_id).facturadoPeriodo += Number(x.total);
   for (const x of pagosPeriodo) cli(x.cliente_id).cobradoPeriodo += Number(x.monto);
   for (const [id, s] of saldoCliente) {
     const c = cli(id);
@@ -596,7 +604,7 @@ export async function getReporteGerencial(
     }
     return b;
   };
-  for (const x of pedidosPeriodo) cobBucket(x.dia.slice(0, 7)).facturado += Number(x.total);
+  for (const x of ventasPeriodo) cobBucket(x.dia.slice(0, 7)).facturado += Number(x.total);
   for (const x of pagosPeriodo) cobBucket(x.fecha.slice(0, 7)).cobrado += Number(x.monto);
 
   const deudaTotal = alDia + porVencer + v1a30 + v31a60 + vMas60;
@@ -620,14 +628,13 @@ export async function getReporteGerencial(
       .map((m) => ({ ...m, facturado: r2(m.facturado), cobrado: r2(m.cobrado) })),
   };
 
-  // --- Ventas a Valmax ---------------------------------------------------------
+  // --- Envíos a Valmax (clientes internos) -------------------------------------
   const { data: valmaxCli, error: vErr } = await supabase
     .from("clientes")
     .select("id, razon_social")
-    .ilike("razon_social", "%valmax%");
+    .eq("excluir_facturacion", true);
   if (vErr) throw new Error(vErr.message);
-  const valmaxIds = new Set((valmaxCli ?? []).map((c) => c.id));
-  const pedValmax = pedidosPeriodo.filter((x) => valmaxIds.has(x.cliente_id));
+  const pedValmax = pedidosPeriodo.filter((x) => internos.has(x.cliente_id));
 
   const productosMap = new Map<string, ValmaxProducto>();
   const idsValmax = pedValmax.map((x) => x.id);
@@ -672,7 +679,7 @@ export async function getReporteGerencial(
     cantPedidos: valmaxPedidos.length,
     ventasNetas: r2(vNetas),
     ventasBrutas: r2(valmaxPedidos.reduce((a, x) => a + x.total, 0)),
-    participacion: totalNetoPeriodo > 0 ? vNetas / totalNetoPeriodo : 0,
+    participacion: totalNetoPeriodo + vNetas > 0 ? vNetas / (totalNetoPeriodo + vNetas) : 0,
     pagado: r2(valmaxPedidos.reduce((a, x) => a + x.pagado, 0)),
     saldo: r2(valmaxPedidos.reduce((a, x) => a + x.saldo, 0)),
     pedidos: valmaxPedidos,

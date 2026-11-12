@@ -54,6 +54,8 @@ export type Cliente = {
   notas: string | null;
   vendedor_id: string | null;
   condicion_pago_dias: number;
+  /** Cliente interno (ej. Valmax): sus pedidos no suman a la facturación. */
+  excluir_facturacion: boolean;
   fecha_alta: string;
   created_at: string;
   updated_at: string;
@@ -527,7 +529,7 @@ export interface Database {
     Tables: {
       clientes: {
         Row: Row<Cliente>;
-        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal" | "vendedor_id" | "condicion_pago_dias">;
+        Insert: Insert<Cliente, "id" | "fecha_alta" | "created_at" | "updated_at" | "condicion_fiscal" | "vendedor_id" | "condicion_pago_dias" | "excluir_facturacion">;
         Update: Update<Cliente>;
         Relationships: [];
       };

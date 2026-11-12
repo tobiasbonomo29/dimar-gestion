@@ -206,7 +206,7 @@ export function ReportesPanel({ anios }: { anios: number[] }) {
             <TabsList className="flex-wrap">
               <TabsTrigger value="eerr">Estado de resultados</TabsTrigger>
               <TabsTrigger value="vendedores">Ranking vendedores</TabsTrigger>
-              <TabsTrigger value="valmax">Ventas a Valmax</TabsTrigger>
+              <TabsTrigger value="valmax">Envíos a Valmax</TabsTrigger>
               <TabsTrigger value="cobranza">Estado de cobranza</TabsTrigger>
             </TabsList>
 
@@ -417,16 +417,20 @@ export function ReportesPanel({ anios }: { anios: number[] }) {
               )}
             </TabsContent>
 
-            {/* ---------------- Ventas a Valmax ---------------- */}
+            {/* ---------------- Envíos a Valmax (no suman a ventas) ---------------- */}
             <TabsContent value="valmax" className="space-y-4">
               {r.valmax.clientes.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No hay un cliente Valmax cargado.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">No hay clientes internos marcados (editá el cliente Valmax y activá «Cliente interno»).</p>
               ) : (
                 <>
+                  <p className="text-sm text-muted-foreground">
+                    Mercadería enviada a clientes internos. No suma a las ventas, al estado de resultados ni a
+                    las comisiones; se lleva aparte acá.
+                  </p>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <Kpi label="Venta neta (sin IVA)" valor={$(r.valmax.ventasNetas)} hint={`${r.valmax.cantPedidos} pedidos`} />
-                    <Kpi label="Venta con IVA" valor={$(r.valmax.ventasBrutas)} />
-                    <Kpi label="% de las ventas netas" valor={pct(r.valmax.participacion)} />
+                    <Kpi label="Neto enviado (sin IVA)" valor={$(r.valmax.ventasNetas)} hint={`${r.valmax.cantPedidos} pedidos`} />
+                    <Kpi label="Enviado con IVA" valor={$(r.valmax.ventasBrutas)} />
+                    <Kpi label="% sobre ventas + envíos" valor={pct(r.valmax.participacion)} />
                     <Kpi
                       label="Saldo pendiente"
                       valor={$(r.valmax.saldo)}
@@ -455,7 +459,7 @@ export function ReportesPanel({ anios }: { anios: number[] }) {
                           {r.valmax.pedidos.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={7} className="h-20 text-center text-muted-foreground">
-                                Sin ventas a Valmax en el período.
+                                Sin envíos a Valmax en el período.
                               </TableCell>
                             </TableRow>
                           ) : (
@@ -487,7 +491,7 @@ export function ReportesPanel({ anios }: { anios: number[] }) {
                   {r.valmax.productos.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-base">Productos vendidos a Valmax</CardTitle>
+                        <CardTitle className="text-base">Productos enviados a Valmax</CardTitle>
                       </CardHeader>
                       <CardContent className="p-0">
                         <Table>

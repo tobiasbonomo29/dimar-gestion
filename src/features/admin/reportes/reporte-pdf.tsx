@@ -238,19 +238,20 @@ export function ReporteGerencialPDF({ r, empresa }: { r: ReporteGerencial; empre
         {Footer}
       </Page>
 
-      {/* 3. Ventas a Valmax */}
+      {/* 3. Envíos a Valmax */}
       <Page size="A4" style={s.page}>
         {Header}
-        <Text style={s.h2}>3. Ventas a Valmax</Text>
+        <Text style={s.h2}>3. Envíos a Valmax</Text>
         <Text style={s.h2sub}>
-          {vx.clientes.length > 0 ? `Cliente: ${vx.clientes.join(", ")}.` : "No hay un cliente Valmax cargado."} Saldos
+          {vx.clientes.length > 0 ? `Cliente: ${vx.clientes.join(", ")}.` : "No hay clientes internos marcados."} No suman a
+          las ventas ni al estado de resultados. Saldos
           al {fechaAR(cb.fechaCorte)}.
         </Text>
         <View style={s.kpis}>
           <Kpi label="Pedidos" valor={String(vx.cantPedidos)} />
           <Kpi label="Venta neta (sin IVA)" valor={$(vx.ventasNetas)} />
           <Kpi label="Venta con IVA" valor={$(vx.ventasBrutas)} />
-          <Kpi label="% de las ventas netas" valor={pct(vx.participacion)} />
+          <Kpi label="% sobre ventas + envíos" valor={pct(vx.participacion)} />
         </View>
         <View style={s.kpis}>
           <Kpi label="Cobrado" valor={$(vx.pagado)} />

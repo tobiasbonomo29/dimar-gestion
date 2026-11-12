@@ -31,6 +31,7 @@ export async function createCliente(
       notas: parsed.data.notas ?? null,
       vendedor_id: parsed.data.vendedor_id ?? null,
       condicion_pago_dias: parsed.data.condicion_pago_dias,
+      excluir_facturacion: parsed.data.excluir_facturacion,
     })
     .select("id")
     .single();
@@ -64,6 +65,7 @@ export async function updateCliente(
       notas: parsed.data.notas ?? null,
       vendedor_id: parsed.data.vendedor_id ?? null,
       condicion_pago_dias: parsed.data.condicion_pago_dias,
+      excluir_facturacion: parsed.data.excluir_facturacion,
     })
     .eq("id", id);
 

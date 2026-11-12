@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getSaldosPorCliente } from "@/features/clientes/queries";
+import { getClientesInternosIds, getSaldosPorCliente } from "@/features/clientes/queries";
 import type { EstadoPedido } from "@/types/database";
 import type { PedidoConCliente } from "@/features/pedidos/queries";
 
@@ -16,7 +16,7 @@ export type DashboardData = {
   proximosDespachar: PedidoConCliente[];
   // Indicadores del mes en curso.
   pedidosDelMes: number;
-  facturacionEstimadaMes: number; // suma de totales de pedidos del mes (excl. cancelados)
+  facturacionEstimadaMes: number; // suma de totales de pedidos del mes (excl. cancelados y clientes internos)
   // Conteo por estado (para un vistazo rápido).
   conteoPorEstado: Record<EstadoPedido, number>;
   // Cuenta corriente: total pendiente de cobro y los clientes con mayor deuda.
@@ -51,7 +51,7 @@ async function getDashboardOnce(): Promise<DashboardData> {
   const supabase = await createClient();
   const desde = inicioDeMes();
 
-  const [pendientesRes, proximosRes, delMesRes, conteoRes, saldos] = await Promise.all([
+  const [pendientesRes, proximosRes, delMesRes, conteoRes, saldos, internos] = await Promise.all([
     // Pendientes de respuesta (cotizados), más nuevos primero.
     supabase
       .from("pedidos")
@@ -71,13 +71,14 @@ async function getDashboardOnce(): Promise<DashboardData> {
     // Pedidos del mes (excluye cancelados) — traigo total y estado para agregar.
     supabase
       .from("pedidos")
-      .select("total, estado")
+      .select("total, estado, cliente_id")
       .gte("fecha_creacion", desde)
       .neq("estado", "cancelado"),
     // Conteo por estado (todos).
     supabase.from("pedidos").select("estado"),
     // Saldo de cuenta corriente por cliente (para el resumen de cobranzas).
     getSaldosPorCliente(),
+    getClientesInternosIds(supabase),
   ]);
 
   if (pendientesRes.error) throw new Error(pendientesRes.error.message);
@@ -86,7 +87,10 @@ async function getDashboardOnce(): Promise<DashboardData> {
   if (conteoRes.error) throw new Error(conteoRes.error.message);
 
   const delMes = delMesRes.data ?? [];
-  const facturacionEstimadaMes = delMes.reduce((acc, p) => acc + Number(p.total), 0);
+  // Los clientes internos (ej. Valmax) no suman a la facturación.
+  const facturacionEstimadaMes = delMes
+    .filter((p) => !internos.has(p.cliente_id))
+    .reduce((acc, p) => acc + Number(p.total), 0);
 
   const conteoPorEstado: Record<EstadoPedido, number> = {
     cotizado: 0,

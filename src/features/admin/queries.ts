@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_GENERAN_DEUDA } from "@/lib/constants";
+import { getClientesInternosIds } from "@/features/clientes/queries";
 import type { Egreso, TipoEgreso, AporteCapital, Vendedor, EstadoPedido } from "@/types/database";
 
 /** Lista de egresos (compras/erogaciones), opcionalmente filtrada por tipo. */
@@ -59,6 +60,7 @@ function mesLabel(key: string): string {
  * Estado de resultados de la unidad actual entre dos fechas (inclusive).
  * Ventas = pedidos facturados (estados que generan deuda), por fecha de facturación.
  * Egresos = compras + erogaciones cargadas. Todo por su TOTAL (sin discriminar IVA).
+ * Los pedidos de clientes internos (ej. Valmax) no cuentan como venta.
  * RLS ya limita todo a la unidad del usuario.
  */
 export async function getEstadoResultados(
@@ -67,10 +69,10 @@ export async function getEstadoResultados(
 ): Promise<EstadoResultados> {
   const supabase = await createClient();
 
-  const [ventasRes, egresosRes] = await Promise.all([
+  const [ventasRes, egresosRes, internos] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("total, fecha_facturacion")
+      .select("total, fecha_facturacion, cliente_id")
       .in("estado", ESTADOS_GENERAN_DEUDA)
       .gte("fecha_facturacion", desde)
       .lte("fecha_facturacion", hasta),
@@ -79,9 +81,11 @@ export async function getEstadoResultados(
       .select("tipo, fecha, categoria, monto")
       .gte("fecha", desde)
       .lte("fecha", hasta),
+    getClientesInternosIds(supabase),
   ]);
   if (ventasRes.error) throw new Error(ventasRes.error.message);
   if (egresosRes.error) throw new Error(egresosRes.error.message);
+  const ventasPeds = (ventasRes.data ?? []).filter((p) => !internos.has(p.cliente_id));
 
   // Bucket mensual entre desde y hasta.
   const buckets = new Map<string, MesResultado>();
@@ -105,7 +109,7 @@ export async function getEstadoResultados(
   };
 
   let ventas = 0;
-  for (const p of ventasRes.data ?? []) {
+  for (const p of ventasPeds) {
     const monto = Number(p.total);
     ventas += monto;
     if (p.fecha_facturacion) bucket(new Date(p.fecha_facturacion + "T00:00:00")).ventas += monto;
@@ -143,7 +147,7 @@ export async function getEstadoResultados(
     egresosTotal,
     resultado,
     margen: ventas > 0 ? resultado / ventas : 0,
-    cantVentas: ventasRes.data?.length ?? 0,
+    cantVentas: ventasPeds.length,
     mensual,
     porCategoria: [...porCategoria.entries()]
       .map(([categoria, monto]) => ({ categoria, monto }))
@@ -190,10 +194,10 @@ type PedFact = {
   clientes: { razon_social: string; cuit: string | null } | null;
 };
 
-/** Total facturado del período + desglose por cliente y por producto. */
+/** Total facturado del período + desglose por cliente y por producto (sin clientes internos). */
 export async function getFacturacion(desde: string, hasta: string): Promise<Facturacion> {
   const supabase = await createClient();
-  const [pedsRes, vendRes] = await Promise.all([
+  const [pedsRes, vendRes, internos] = await Promise.all([
     supabase
       .from("pedidos")
       .select("id, numero, fecha_facturacion, total, cliente_id, vendedor_id, clientes(razon_social, cuit)")
@@ -202,10 +206,11 @@ export async function getFacturacion(desde: string, hasta: string): Promise<Fact
       .lte("fecha_facturacion", hasta)
       .returns<PedFact[]>(),
     supabase.from("vendedores").select("id, nombre"),
+    getClientesInternosIds(supabase),
   ]);
   if (pedsRes.error) throw new Error(pedsRes.error.message);
   if (vendRes.error) throw new Error(vendRes.error.message);
-  const peds = pedsRes.data;
+  const peds = (pedsRes.data ?? []).filter((p) => !internos.has(p.cliente_id));
   const nombreVendedor = new Map((vendRes.data ?? []).map((v) => [v.id, v.nombre]));
 
   const ids = (peds ?? []).map((p) => p.id);
@@ -404,13 +409,15 @@ type PedLiq = {
   fecha_facturacion: string;
   total: number;
   iva_monto: number;
+  cliente_id: string;
   vendedor_id: string | null;
   clientes: { razon_social: string; cuit: string | null } | null;
 };
 
 /**
  * Liquidación de comisiones por vendedor entre dos fechas (inclusive).
- * Considera solo pedidos facturados (los que generan deuda). La base de la
+ * Considera solo pedidos facturados (los que generan deuda), sin los de
+ * clientes internos (ej. Valmax). La base de la
  * comisión es la "venta sin impuestos" = total − IVA; el porcentaje sale de
  * cada vendedor (comision_porcentaje, 3% por defecto). Si se pasa vendedorId,
  * filtra a ese vendedor.
@@ -422,16 +429,17 @@ export async function getLiquidacion(
 ): Promise<Liquidacion> {
   const supabase = await createClient();
 
-  const [pedsRes, vendedoresRes] = await Promise.all([
+  const [pedsRes, vendedoresRes, internos] = await Promise.all([
     supabase
       .from("pedidos")
-      .select("id, numero, fecha_facturacion, total, iva_monto, vendedor_id, clientes(razon_social, cuit)")
+      .select("id, numero, fecha_facturacion, total, iva_monto, cliente_id, vendedor_id, clientes(razon_social, cuit)")
       .in("estado", ESTADOS_GENERAN_DEUDA)
       .gte("fecha_facturacion", desde)
       .lte("fecha_facturacion", hasta)
       .order("fecha_facturacion", { ascending: true })
       .returns<PedLiq[]>(),
     supabase.from("vendedores").select("*").returns<Vendedor[]>(),
+    getClientesInternosIds(supabase),
   ]);
   if (pedsRes.error) throw new Error(pedsRes.error.message);
   if (vendedoresRes.error) throw new Error(vendedoresRes.error.message);
@@ -443,6 +451,7 @@ export async function getLiquidacion(
   const sinVendedor = { cantPedidos: 0, netoTotal: 0 };
 
   for (const p of pedsRes.data ?? []) {
+    if (internos.has(p.cliente_id)) continue;
     const total = Number(p.total);
     const neto = total - Number(p.iva_monto);
 
@@ -610,12 +619,15 @@ export async function getVentasPorProductoMensual(
 ): Promise<VentasPorProducto> {
   const supabase = await createClient();
 
-  const { data: peds, error } = await supabase
-    .from("pedidos")
-    .select("id, fecha_facturacion")
-    .in("estado", ESTADOS_GENERAN_DEUDA)
-    .gte("fecha_facturacion", desde)
-    .lte("fecha_facturacion", hasta);
+  const [{ data: peds, error }, internos] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, fecha_facturacion, cliente_id")
+      .in("estado", ESTADOS_GENERAN_DEUDA)
+      .gte("fecha_facturacion", desde)
+      .lte("fecha_facturacion", hasta),
+    getClientesInternosIds(supabase),
+  ]);
   if (error) throw new Error(error.message);
 
   // Lista de meses del período.
@@ -629,7 +641,9 @@ export async function getVentasPorProductoMensual(
   }
 
   const pedMes = new Map<string, string>();
-  for (const p of peds ?? []) if (p.fecha_facturacion) pedMes.set(p.id, p.fecha_facturacion.slice(0, 7));
+  for (const p of peds ?? []) {
+    if (p.fecha_facturacion && !internos.has(p.cliente_id)) pedMes.set(p.id, p.fecha_facturacion.slice(0, 7));
+  }
   const ids = [...pedMes.keys()];
   if (ids.length === 0) return { meses, productos: [], totalMonto: 0 };
 
