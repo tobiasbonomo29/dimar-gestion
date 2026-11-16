@@ -377,6 +377,31 @@ export type Unidad = {
   created_at: string;
 }
 
+export type MlConexion = {
+  unidad_id: string;
+  ml_user_id: number;
+  nickname: string | null;
+  access_token: string;
+  refresh_token: string;
+  expires_at: string;
+  conectado_at: string;
+  updated_at: string;
+}
+
+export type MlVenta = {
+  id: string;
+  unidad_id: string;
+  ml_order_id: number;
+  pedido_id: string | null;
+  estado: "importada" | "error";
+  detalle: string | null;
+  total: number | null;
+  comision: number | null;
+  envio: number | null;
+  fecha: string | null;
+  created_at: string;
+}
+
 export type Perfil = {
   user_id: string;
   unidad_id: string;
@@ -782,12 +807,28 @@ export interface Database {
         Update: Update<FarmEerr>;
         Relationships: [];
       };
+      ml_conexiones: {
+        Row: Row<MlConexion>;
+        Insert: Insert<MlConexion, "nickname" | "conectado_at" | "updated_at">;
+        Update: Update<MlConexion>;
+        Relationships: [];
+      };
+      ml_ventas: {
+        Row: Row<MlVenta>;
+        Insert: Insert<MlVenta, "id" | "pedido_id" | "detalle" | "total" | "comision" | "envio" | "fecha" | "created_at">;
+        Update: Update<MlVenta>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       descontar_stock_pedido: {
         Args: { p_pedido_id: string };
         Returns: undefined;
+      };
+      ml_importar_venta: {
+        Args: { p_unidad: string; p_venta: Record<string, unknown> };
+        Returns: Record<string, unknown>;
       };
     };
     Enums: {
