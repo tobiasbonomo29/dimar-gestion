@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/features/clientes/actions";
 import { conexionPorUnidad, sincronizarConexion } from "./sync";
+import { tieneMercadoLibre } from "./acceso";
 
 async function unidadActual(): Promise<string | null> {
   const supabase = await createClient();
@@ -13,7 +14,8 @@ async function unidadActual(): Promise<string | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase.from("perfiles").select("unidad_id").eq("user_id", user.id).maybeSingle();
-  return data?.unidad_id ?? null;
+  // Solo las unidades habilitadas pueden operar Mercado Libre.
+  return tieneMercadoLibre(data?.unidad_id) ? data!.unidad_id : null;
 }
 
 /** Revisa ahora las ventas cobradas de los últimos 7 días y carga las que falten. */
