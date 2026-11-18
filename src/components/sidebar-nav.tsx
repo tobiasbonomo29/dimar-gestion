@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Package, ClipboardList, Truck, BarChart3, Pill, Store, UserCheck, Boxes, Wallet, Factory, Stethoscope, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEmpresa } from "@/components/empresa-provider";
+import { tieneMercadoLibre } from "@/features/mercadolibre/acceso";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -17,17 +19,19 @@ const NAV = [
   { href: "/administracion", label: "Administración", icon: BarChart3 },
   { href: "/farmacia", label: "Farmacia", icon: Stethoscope },
   { href: "/cuentas-pagar", label: "Cuentas a pagar", icon: Wallet },
-  { href: "/mercadolibre", label: "Mercado Libre", icon: ShoppingBag },
+  { href: "/mercadolibre", label: "Mercado Libre", icon: ShoppingBag, soloMercadoLibre: true },
   { href: "/vendedores", label: "Vendedores", icon: UserCheck },
   { href: "/puntos-venta", label: "Puntos de venta", icon: Store },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const empresa = useEmpresa();
+  const items = NAV.filter((i) => !("soloMercadoLibre" in i) || tieneMercadoLibre(empresa.id));
 
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {NAV.map(({ href, label, icon: Icon, exact }) => {
+      {items.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
           <Link

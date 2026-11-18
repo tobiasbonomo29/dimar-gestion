@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { tieneMercadoLibre } from "@/features/mercadolibre/acceso";
 import { firmarState, mlConfigurado, urlAutorizacion } from "@/features/mercadolibre/api";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
 
   const { data: perfil } = await supabase.from("perfiles").select("unidad_id").eq("user_id", user.id).maybeSingle();
   if (!perfil) return NextResponse.redirect(`${origin}/mercadolibre?error=unidad`);
+  if (!tieneMercadoLibre(perfil.unidad_id)) return NextResponse.redirect(`${origin}/`);
 
   return NextResponse.redirect(urlAutorizacion(origin, firmarState(perfil.unidad_id)));
 }

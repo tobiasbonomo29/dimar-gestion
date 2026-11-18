@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { tieneMercadoLibre } from "@/features/mercadolibre/acceso";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mlConfigurado } from "@/features/mercadolibre/api";
 import { MercadoLibrePanel, type VentaML } from "@/features/mercadolibre/components/mercadolibre-panel";
@@ -18,6 +20,9 @@ export default async function MercadoLibrePage({
   const { data: perfil } = user
     ? await supabase.from("perfiles").select("unidad_id").eq("user_id", user.id).maybeSingle()
     : { data: null };
+
+  // Solo las unidades habilitadas ven Mercado Libre.
+  if (!tieneMercadoLibre(perfil?.unidad_id)) notFound();
 
   const configurado = mlConfigurado() && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 

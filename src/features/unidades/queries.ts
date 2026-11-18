@@ -3,6 +3,8 @@ import { EMPRESA } from "@/lib/constants";
 
 /** Datos de membrete de la unidad de negocio del usuario logueado. */
 export type Empresa = {
+  /** id de la unidad de negocio (vacío si el usuario no tiene unidad). */
+  id: string;
   nombre: string;
   cuit: string;
   direccion: string;
@@ -19,12 +21,13 @@ export async function getEmpresaActual(): Promise<Empresa> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("unidades")
-    .select("nombre, cuit, direccion, email, telefono")
+    .select("id, nombre, cuit, direccion, email, telefono")
     .maybeSingle();
 
   // Sin unidad asociada: membrete por defecto (variables de entorno).
   if (!data) {
     return {
+      id: "",
       nombre: EMPRESA.nombre,
       cuit: EMPRESA.cuit,
       direccion: EMPRESA.direccion,
@@ -36,6 +39,7 @@ export async function getEmpresaActual(): Promise<Empresa> {
   // Con unidad: se usan SIEMPRE sus propios datos. Los que falten quedan
   // vacíos (no se mezclan con los de otra unidad ni con las env de Dimar).
   return {
+    id: data.id,
     nombre: data.nombre?.trim() || EMPRESA.nombre,
     cuit: data.cuit ?? "",
     direccion: data.direccion ?? "",
