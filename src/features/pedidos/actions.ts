@@ -59,6 +59,114 @@ export async function createPedido(
 }
 
 /**
+ * Edita un pedido que todavía está "cotizado": datos generales, descuento, IVA
+ * e ítems (cantidades, precios, agregar o quitar). Una vez confirmado o
+ * facturado ya no se puede editar desde acá.
+ *
+ * Los ítems se reemplazan: primero se insertan los nuevos y recién después se
+ * borran los viejos, así si algo falla el pedido nunca queda vacío. Los
+ * totales los recalculan los triggers. Si el pedido ya tenía el stock
+ * descontado (casos viejos), se ajusta el stock por la diferencia.
+ */
+export async function updatePedido(
+  id: string,
+  values: PedidoFormValues,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = pedidoSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Datos inválidos" };
+  }
+  const { items, ...pedido } = parsed.data;
+  const supabase = await createClient();
+
+  const { data: actual, error: readErr } = await supabase
+    .from("pedidos")
+    .select("estado, stock_descontado, pedido_items(id, producto_id, cantidad)")
+    .eq("id", id)
+    .maybeSingle<{
+      estado: EstadoPedido;
+      stock_descontado: boolean;
+      pedido_items: { id: string; producto_id: string | null; cantidad: number }[];
+    }>();
+  if (readErr) return { ok: false, error: readErr.message };
+  if (!actual) return { ok: false, error: "El pedido no existe" };
+  if (actual.estado !== "cotizado") {
+    return { ok: false, error: "Solo se pueden editar pedidos en estado “Cotizado”." };
+  }
+
+  const { error: updErr } = await supabase
+    .from("pedidos")
+    .update({
+      cliente_id: pedido.cliente_id,
+      vendedor_id: pedido.vendedor_id ?? null,
+      origen: pedido.origen ?? null,
+      fecha_estimada_entrega: pedido.fecha_estimada_entrega,
+      descuento_porcentaje: pedido.descuento_porcentaje,
+      iva_porcentaje: pedido.iva_porcentaje,
+      notas: pedido.notas ?? null,
+    })
+    .eq("id", id);
+  if (updErr) return { ok: false, error: updErr.message };
+
+  const { data: nuevos, error: insErr } = await supabase
+    .from("pedido_items")
+    .insert(
+      items.map((it) => ({
+        pedido_id: id,
+        producto_id: it.producto_id ?? null,
+        variante_id: it.variante_id ?? null,
+        descripcion: it.descripcion,
+        cantidad: it.cantidad,
+        precio_unitario: it.precio_unitario,
+      })),
+    )
+    .select("id");
+  if (insErr) return { ok: false, error: insErr.message };
+
+  const viejos = actual.pedido_items.map((it) => it.id);
+  if (viejos.length > 0) {
+    const { error: delErr } = await supabase.from("pedido_items").delete().in("id", viejos);
+    if (delErr) {
+      // Deshace la inserción para no duplicar ítems.
+      await supabase
+        .from("pedido_items")
+        .delete()
+        .in("id", (nuevos ?? []).map((n) => n.id));
+      return { ok: false, error: delErr.message };
+    }
+  }
+
+  // Pedido con stock ya descontado: devuelve lo viejo y resta lo nuevo.
+  if (actual.stock_descontado) {
+    const delta = new Map<string, number>();
+    for (const it of actual.pedido_items) {
+      if (it.producto_id) delta.set(it.producto_id, (delta.get(it.producto_id) ?? 0) + Number(it.cantidad));
+    }
+    for (const it of items) {
+      if (it.producto_id) delta.set(it.producto_id, (delta.get(it.producto_id) ?? 0) - Number(it.cantidad));
+    }
+    for (const [productoId, d] of delta) {
+      if (d === 0) continue;
+      const { data: prod } = await supabase
+        .from("productos")
+        .select("stock")
+        .eq("id", productoId)
+        .maybeSingle();
+      if (prod) {
+        await supabase
+          .from("productos")
+          .update({ stock: Number(prod.stock) + d })
+          .eq("id", productoId);
+      }
+    }
+  }
+
+  revalidatePath("/pedidos");
+  revalidatePath(`/pedidos/${id}`);
+  return { ok: true, data: { id } };
+}
+
+/**
  * Cambia el estado de un pedido y registra el movimiento en el historial
  * (con nota opcional). El estado inicial lo registra el trigger al crear.
  */

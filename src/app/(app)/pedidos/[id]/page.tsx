@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -56,7 +58,17 @@ export default async function PedidoDetallePage({
             {pedido.origen ? ` · Origen: ${ORIGENES_PEDIDO[pedido.origen]}` : ""}
           </p>
         </div>
-        <DescargarCotizacion pedido={pedido} />
+        <div className="flex flex-wrap items-center gap-2">
+          {pedido.estado === "cotizado" && (
+            <Button asChild variant="outline">
+              <Link href={`/pedidos/${pedido.id}/editar`}>
+                <Pencil className="h-4 w-4" />
+                Editar pedido
+              </Link>
+            </Button>
+          )}
+          <DescargarCotizacion pedido={pedido} />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

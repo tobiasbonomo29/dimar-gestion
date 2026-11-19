@@ -28,7 +28,7 @@ import { formatCurrency } from "@/lib/format";
 import type { Cliente, Vendedor } from "@/types/database";
 import type { ProductoConVariantes } from "@/features/productos/queries";
 import { getProductoNombre } from "@/features/productos/display";
-import { createPedido } from "../actions";
+import { createPedido, updatePedido } from "../actions";
 import {
   pedidoDefaults,
   pedidoItemDefaults,
@@ -41,6 +41,9 @@ interface Props {
   clientes: Cliente[];
   catalogo: ProductoConVariantes[];
   vendedores: Vendedor[];
+  /** Si viene, el formulario edita ese pedido (solo cotizados). */
+  pedidoId?: string;
+  initialValues?: PedidoFormValues;
 }
 
 // Opción de catálogo: producto ("p:id") o variante ("v:id").
@@ -93,7 +96,8 @@ function buildCatalogo(catalogo: ProductoConVariantes[]): {
   return { options, map };
 }
 
-export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
+export function PedidoForm({ clientes, catalogo, vendedores, pedidoId, initialValues }: Props) {
+  const editando = Boolean(pedidoId);
   const router = useRouter();
   const [clienteDialogOpen, setClienteDialogOpen] = React.useState(false);
   // cliente_id -> vendedor_id, para autocompletar el vendedor al elegir cliente.
@@ -104,7 +108,14 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
   // Clientes creados en esta sesión (antes de que refresque la data del server).
   const [extraClientes, setExtraClientes] = React.useState<ComboboxOption[]>([]);
   // Guarda qué opción de catálogo se eligió en cada fila (para el combobox).
-  const [itemKeys, setItemKeys] = React.useState<Record<number, string>>({});
+  const [itemKeys, setItemKeys] = React.useState<Record<number, string>>(() => {
+    const keys: Record<number, string> = {};
+    (initialValues?.items ?? []).forEach((it, i) => {
+      if (it.variante_id) keys[i] = `v:${it.variante_id}`;
+      else if (it.producto_id) keys[i] = `p:${it.producto_id}`;
+    });
+    return keys;
+  });
 
   const { options: catalogoOptions, map: catalogoMap } = React.useMemo(
     () => buildCatalogo(catalogo),
@@ -130,7 +141,7 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
     setValue,
     formState: { isSubmitting },
   } = useForm<PedidoFormValues>({
-    defaultValues: { ...pedidoDefaults, items: [pedidoItemDefaults] },
+    defaultValues: initialValues ?? { ...pedidoDefaults, items: [pedidoItemDefaults] },
   });
 
   const { fields, append, remove, update } = useFieldArray({ control, name: "items" });
@@ -192,12 +203,12 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
   }
 
   async function onSubmit(values: PedidoFormValues) {
-    const result = await createPedido(values);
+    const result = pedidoId ? await updatePedido(pedidoId, values) : await createPedido(values);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success("Pedido creado en estado “Cotizado”");
+    toast.success(pedidoId ? "Pedido actualizado" : "Pedido creado en estado “Cotizado”");
     router.push(`/pedidos/${result.data.id}`);
   }
 
@@ -405,7 +416,19 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
-                        onClick={() => remove(index)}
+                        onClick={() => {
+                          remove(index);
+                          // Reacomoda las claves del combobox a los nuevos índices.
+                          setItemKeys((prev) => {
+                            const next: Record<number, string> = {};
+                            for (const [k, v] of Object.entries(prev)) {
+                              const i = Number(k);
+                              if (i < index) next[i] = v;
+                              else if (i > index) next[i - 1] = v;
+                            }
+                            return next;
+                          });
+                        }}
                         aria-label="Quitar ítem"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -494,11 +517,22 @@ export function PedidoForm({ clientes, catalogo, vendedores }: Props) {
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Crear pedido
+              {editando ? "Guardar cambios" : "Crear pedido"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              El pedido se crea en estado “Cotizado”.
-            </p>
+            {editando ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => router.push(`/pedidos/${pedidoId}`)}
+              >
+                Cancelar
+              </Button>
+            ) : (
+              <p className="text-center text-xs text-muted-foreground">
+                El pedido se crea en estado “Cotizado”.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
